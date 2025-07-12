@@ -42,7 +42,7 @@ module "s3_bucket" {
 
 
 resource "aws_s3_bucket_policy" "policy" {
-  bucket = aws_s3_bucket.bucket.id
+  bucket = aws_s3_bucket.amrit-bucket.id
 
   policy = jsonencode({
     Version = "2012-10-17",
