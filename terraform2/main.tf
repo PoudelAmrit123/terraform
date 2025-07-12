@@ -28,7 +28,7 @@ module "s3_bucket" {
   account_id = var.account_id
   source      = "../../modules/s3"
   bucket_name = "com.amrit.terraform-backend.lf"
-  should_enable_versioning = local.config.should_enable_versioning
+  should_enable_versioning = var.should_enable_versioning
   
   tags        = merge(
     local.tags , {

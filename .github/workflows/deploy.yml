@@ -22,8 +22,8 @@ jobs:
         uses: dorny/paths-filter@v2
         with:
           filters: |
-            terraform2:
-              - 'terraform2/**'
+            terraform1:
+              - 'terraform1/**'
             terraform2:
               - 'terraform2/**'
 
