@@ -153,7 +153,13 @@ jobs:
       - name: Determine bump type
         id: bump_type
         run: |
-          commits=$(git log ${{ steps.get_tag.outputs.latest_tag }}..HEAD --oneline)
+          latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            commits=$(git log --oneline)
+          else
+            commits=$(git log "$latest_tag"..HEAD --oneline)
+          fi
           bump="patch"
           if echo "$commits" | grep -q "BREAKING CHANGE|!:"; then
             bump="major"
