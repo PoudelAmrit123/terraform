@@ -48,7 +48,9 @@ resource "aws_s3_bucket_policy" "policy" {
     Version = "2012-10-17",
     Statement = [{
       Effect    = "Allow",
-      Principal = "arn:aws:iam::${var.account_id}:user/${var.account_name}", // TODO: Need to implement the ec2 instance id later on after the ec2 instance is created.
+      Principal = {
+      AWS = "arn:aws:iam::${var.account_id}:user/${var.account_name}"
+}
       Action    = ["s3:GetObject", "s3:PutObject"],
       Resource  = "${module.s3_bucket.bucket_arn}/*"
     }]
