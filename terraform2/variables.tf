@@ -4,7 +4,11 @@ variable "region" {
 
 }
 
-
+variable "account_name" {
+    description = "account name "
+    type = string
+  
+}
 
 variable "account_id" {
   description = "the account id for creating the bucket policy"
