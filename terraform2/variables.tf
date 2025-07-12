@@ -5,9 +5,9 @@ variable "region" {
 }
 
 variable "account_name" {
-    description = "account name "
-    type = string
-  
+  description = "account name "
+  type        = string
+
 }
 
 variable "account_id" {
