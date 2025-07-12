@@ -90,7 +90,7 @@ jobs:
         run: terraform -chdir=terraform2 init
 
       - name: Run tfsec scan and comment
-        uses: aquasecurity/tfsec-pr-commenter-action@v1
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tfsec_args: --soft-fail
