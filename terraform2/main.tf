@@ -42,7 +42,7 @@ module "s3_bucket" {
 
 
 resource "aws_s3_bucket_policy" "policy" {
-  bucket = aws_s3_bucket.amrit-bucket.id
+  bucket = module.s3_bucket.bucket_name
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -50,7 +50,7 @@ resource "aws_s3_bucket_policy" "policy" {
       Effect    = "Allow",
       Principal = "*", // TODO: Need to implement the ec2 instance id later on after the ec2 instance is created.
       Action    = ["s3:GetObject", "s3:PutObject"],
-      Resource  = "${aws_s3_bucket.bucket.arn}/*"
+      Resource  = "${module.s3_bucket.bucket_arn}/*"
     }]
   })
 }
