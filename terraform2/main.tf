@@ -47,12 +47,12 @@ resource "aws_s3_bucket_policy" "policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect    = "Allow",
+      Effect = "Allow",
       Principal = {
-      AWS = "arn:aws:iam::${var.account_id}:user/${var.account_name}"
-}
-      Action    = ["s3:GetObject", "s3:PutObject"],
-      Resource  = "${module.s3_bucket.bucket_arn}/*"
+        AWS = "arn:aws:iam::${var.account_id}:user/${var.account_name}"
+      }
+      Action   = ["s3:GetObject", "s3:PutObject"],
+      Resource = "${module.s3_bucket.bucket_arn}/*"
     }]
   })
 }
