@@ -136,7 +136,7 @@ jobs:
 
       - name: Install semver CLI
         run: |
-          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/semver
+          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
           chmod +x semver
           sudo mv semver /usr/local/bin/
 
