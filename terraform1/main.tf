@@ -35,7 +35,7 @@ locals {
 
 module "ec2_instance" {
       count          = terraform.workspace == "prod" ? 1 : 1
-      source         = "../../modules/ec2"
+      source         = "./../module/ec2"
       ami_id         = local.config.ami_id
       instance_type  = local.config.instance_type
       tags           = merge(
