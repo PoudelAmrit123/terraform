@@ -133,6 +133,8 @@ jobs:
     if: needs.filter.outputs.terraform2_changed == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+         fetch-depth: 0
 
       - name: Install semver CLI
         run: |
@@ -161,7 +163,7 @@ jobs:
             commits=$(git log "$latest_tag"..HEAD --oneline)
           fi
           bump="patch"
-          if echo "$commits" | grep -q "BREAKING CHANGE|!:"; then
+          if echo "$commits" | grep -Eq "BREAKING CHANGE|!:"; then
             bump="major"
           elif echo "$commits" | grep -Eiq "^feat"; then
             bump="minor"
