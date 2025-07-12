@@ -16,8 +16,8 @@ variable "should_enable_versioning" {
     type = bool
     default = false
 }
-variable "bucket_name" {
-    description = "the name of the bucket"
-    type = string
+# variable "bucket_name" {
+#     description = "the name of the bucket"
+#     type = string
   
-}
+# }
