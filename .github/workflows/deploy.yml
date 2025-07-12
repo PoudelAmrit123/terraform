@@ -143,8 +143,12 @@ jobs:
       - name: Get latest tag
         id: get_tag
         run: |
-          latest_tag=$(git describe --tags --match="terraform2@v*" --abbrev=0 || echo "terraform2@v0.0.0")
-          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+              latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
+              if [ -z "$latest_tag" ]; then
+              latest_tag="terraform2@v0.0.0"
+              fi
+
+              echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
       - name: Determine bump type
         id: bump_type
