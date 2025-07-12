@@ -204,7 +204,7 @@ jobs:
           message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
 
       - name: Terraform Apply
-        run: terraform  apply -auto-approve 
+        run: terraform  -chdir=terraform2 apply -auto-approve 
 
   
 
