@@ -360,4 +360,4 @@ jobs:
 
       - name: Terraform Apply
         working-directory: terraform1
-        run: terraform apply --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve
+        run: terraform apply  -auto-approve
