@@ -378,7 +378,7 @@ jobs:
             echo "env=dev" >> $GITHUB_OUTPUT
           fi
       - name: Terraform Init
-        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+        run: terraform --chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
         id: plan
