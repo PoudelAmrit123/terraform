@@ -426,17 +426,21 @@ jobs:
       - name: Download terraform1 release artifact
         uses: dsaltares/fetch-gh-release-asset@master
         with:
-          repository: ${{ github.repository }}
-          tag: ${{ needs.terraform1_tag_and_release.outputs.release_tag }}
-          filename: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+          repo: ${{ github.repository }}
+          version: ${{ needs.terraform1_tag_and_release.outputs.release_tag }}
+          file: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+          target: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+          token: ${{ secrets.GITHUB_TOKEN}}
         id: download_terraform1
 
       - name: Download terraform2 release artifact
         uses: dsaltares/fetch-gh-release-asset@master
         with:
-          repository: ${{ github.repository }}
-          tag: ${{ needs.terraform2_tag_and_release.outputs.release_tag }}
+          repo: ${{ github.repository }}
+          version: ${{ needs.terraform2_tag_and_release.outputs.release_tag }}
           filename: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+          token: ${{ secrets.GITHUB_TOKEN}}
+          target: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
         id: download_terraform2
 
       - name: Configure AWS Credentials
