@@ -89,6 +89,9 @@ jobs:
   terraform2_tag_and_release:
     needs: [terraform2_plan ]
     runs-on: ubuntu-latest
+    permissions:
+     pull-requests: write
+     contents: write
     if: needs.filter.outputs.terraform2_changed == 'true'
     steps:
       - uses: actions/checkout@v4
@@ -202,13 +205,11 @@ jobs:
       # - name: Terraform Init
       #   run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
-      - name: Terraform Init
+      - name: Terraform Init and Apply
         working-directory: terraform2
-        run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
-
-      - name: Terraform Apply
-        working-directory: terraform1
-        run: terraform apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve
+        run: |
+          terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
+          terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
         
       # - name: Terraform Apply
       #   run: terraform   -chdir=terraform2 --var="env=${{ steps.backend-config.outputs.env }}"  apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
@@ -272,6 +273,7 @@ jobs:
     needs: terraform1_plan
     permissions:
      pull-requests: write
+     contents: write
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
@@ -393,7 +395,7 @@ jobs:
         working-directory: terraform1
         run: |
           terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
-          terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
+          terraform apply   -auto-approve 
 
       
       # - name: Terraform Init
