@@ -23,20 +23,20 @@ variable "s3_bucket_arn" {
   type        = string
 }
 
-variable "instance_profile_name" {
+variable "instance_profile_name_v2" {
   description = "Name for the IAM instance profile"
   type        = string
-  default     = "ec2_instance_profile"
+  default     = "ec2_instance_profile_v2"
 }
 
 variable "role_name" {
   description = "Name for the IAM role"
   type        = string
-  default     = "ec2_access_s3_role"
+  default     = "ec2_access_s3_role_v2"
 }
 
 variable "policy_name" {
   description = "Name for the IAM policy"
   type        = string
-  default     = "ec2_s3_access_policy"
+  default     = "ec2_s3_access_policy_v2"
 }
