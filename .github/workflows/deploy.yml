@@ -167,10 +167,10 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
 
-      - name: Comment new tag on PR
-        uses: mshick/add-pr-comment@v2
-        with:
-          message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
+      # - name: Comment new tag on PR
+      #   uses: mshick/add-pr-comment@v2
+      #   with:
+      #     message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -348,10 +348,10 @@ jobs:
           automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
 
 
-      - name: Comment new tag on PR
-        uses: mshick/add-pr-comment@v2
-        with:
-          message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
+      # - name: Comment new tag on PR
+      #   uses: mshick/add-pr-comment@v2
+      #   with:
+      #     message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
    
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
