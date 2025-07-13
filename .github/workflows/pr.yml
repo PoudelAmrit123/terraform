@@ -41,6 +41,8 @@ jobs:
     needs: filter
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform2_changed == 'true'
+    permissions:
+      pull-requests: write 
     steps:
       - uses: actions/checkout@v3
 
@@ -124,6 +126,8 @@ jobs:
   terraform2_security_scan:
     needs: terraform2_lint
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
     if: needs.filter.outputs.terraform2_changed == 'true'
     steps:
       - uses: actions/checkout@v3
@@ -170,6 +174,8 @@ jobs:
     needs: [terraform2_lint, terraform2_security_scan]
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform2_changed == 'true'
+    permissions:
+      pull-requests: write 
     steps:
       - uses: actions/checkout@v4
 
@@ -228,6 +234,8 @@ jobs:
   terraform1_lint:
     needs: filter
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
       - uses: actions/checkout@v3
@@ -342,6 +350,8 @@ jobs:
   terraform1_security_scan:
     needs: terraform1_lint
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
       - uses: actions/checkout@v3
@@ -388,6 +398,9 @@ jobs:
   terraform1_plan:
     needs: [terraform1_lint, terraform1_security_scan]
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
+     
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
       - uses: actions/checkout@v3
