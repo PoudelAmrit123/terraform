@@ -319,7 +319,7 @@ jobs:
         run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform1 plan 
+        run: terraform -chdir=terraform1 plan -out=tfplan
 
       
         
@@ -328,5 +328,7 @@ jobs:
         uses: GetTerminus/terraform-pr-commenter@v3
         with:
           comment: true
+          commenter_exitcode: ${{ steps.plan.outcome == 'success' && '0' || '1' }}
+          commenter_plan_path: terraform1/tfplan
         env:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
