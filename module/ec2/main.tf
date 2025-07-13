@@ -21,8 +21,8 @@ resource "aws_iam_policy" "this" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = [
+      Effect = "Allow"
+      Action = [
         "s3:GetObject",
         "s3:PutObject",
         "s3:ListBucket"
@@ -46,11 +46,11 @@ resource "aws_iam_instance_profile" "this" {
 }
 
 resource "aws_instance" "amrit_amazon_server" {
-  ami                         = var.ami_id
-  
-  instance_type               = var.instance_type
+  ami = var.ami_id
+
+  instance_type = var.instance_type
   # subnet_id                   = aws_subnet.this.id
-  
+
   # vpc_security_group_ids      = [aws_security_group.amrit_sg.id]
 
   associate_public_ip_address = true
@@ -59,5 +59,5 @@ resource "aws_instance" "amrit_amazon_server" {
   iam_instance_profile = aws_iam_instance_profile.this.name
 
 
-  tags                        = var.tags
+  tags = var.tags
 }
