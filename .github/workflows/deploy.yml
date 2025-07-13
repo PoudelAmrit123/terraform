@@ -247,22 +247,32 @@ jobs:
 
       - name: Install semver CLI
         run: |
-          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/semver
+          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
           chmod +x semver
           sudo mv semver /usr/local/bin/
 
       - name: Get latest tag
         id: get_tag
         run: |
-          latest_tag=$(git describe --tags --match="terraform1@v*" --abbrev=0 || echo "terraform1@v0.0.0")
-          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+              latest_tag=$(git tag --list "terraform1@v*" --sort=-creatordate | head -n 1)
+              if [ -z "$latest_tag" ]; then
+              latest_tag="terraform1@v0.0.0"
+              fi
+
+              echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
       - name: Determine bump type
         id: bump_type
         run: |
-          commits=$(git log ${{ steps.get_tag.outputs.latest_tag }}..HEAD --oneline)
+          latest_tag=$(git tag --list "terraform1@v*" --sort=-creatordate | head -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            commits=$(git log --oneline)
+          else
+            commits=$(git log "$latest_tag"..HEAD --oneline)
+          fi
           bump="patch"
-          if echo "$commits" | grep -q "BREAKING CHANGE"; then
+          if echo "$commits" | grep -Eq "BREAKING CHANGE|!:"; then
             bump="major"
           elif echo "$commits" | grep -Eiq "^feat"; then
             bump="minor"
