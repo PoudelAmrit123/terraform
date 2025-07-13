@@ -424,30 +424,22 @@ jobs:
           name: terraform1-build-artifact-${{ steps.tag_push.outputs.release_tag }}
           path: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
-      
+
   upload_to_s3:
     needs: [terraform1_tag_and_release, terraform2_tag_and_release]
     runs-on: ubuntu-latest
     steps:
-      - name: Download terraform1 release artifact
-        uses: dsaltares/fetch-gh-release-asset@master
+      - name: Download terraform1 artifact
+        uses: actions/download-artifact@v4
         with:
-          repo: ${{ github.repository }}
-          version: terraform1@${{ needs.terraform1_tag_and_release.outputs.release_tag }}
-          file: build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
-          target: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
-          token: ${{ secrets.GITHUB_TOKEN}}
-        id: download_terraform1
+          name: terraform1-build-artifact-${{ needs.terraform1_tag_and_release.outputs.release_tag }}
+          path: terraform1/
 
-      - name: Download terraform2 release artifact
-        uses: dsaltares/fetch-gh-release-asset@master
+      - name: Download terraform2 artifact
+        uses: actions/download-artifact@v4
         with:
-          repo: ${{ github.repository }}
-          version: terraform2@${{ needs.terraform2_tag_and_release.outputs.release_tag }}
-          filename: build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
-          token: ${{ secrets.GITHUB_TOKEN}}
-          target: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
-        id: download_terraform2
+          name: terraform2-build-artifact-${{ needs.terraform2_tag_and_release.outputs.release_tag }}
+          path: terraform2/
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -457,9 +449,47 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload terraform1 artifact to S3
-        run: aws s3 cp ./terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+        run: aws s3 cp terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
 
       - name: Upload terraform2 artifact to S3
-        run: aws s3 cp ./terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+        run: aws s3 cp terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+
+  # upload_to_s3:
+  #   needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download terraform1 release artifact
+  #       uses: dsaltares/fetch-gh-release-asset@master
+  #       with:
+  #         repo: ${{ github.repository }}
+  #         version: terraform1@${{ needs.terraform1_tag_and_release.outputs.release_tag }}
+  #         file: build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+  #         target: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+  #         token: ${{ secrets.GITHUB_TOKEN}}
+  #       id: download_terraform1
+
+  #     - name: Download terraform2 release artifact
+  #       uses: dsaltares/fetch-gh-release-asset@master
+  #       with:
+  #         repo: ${{ github.repository }}
+  #         version: terraform2@${{ needs.terraform2_tag_and_release.outputs.release_tag }}
+  #         file: build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+  #         token: ${{ secrets.GITHUB_TOKEN}}
+  #         target: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+  #       id: download_terraform2
+
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
+
+  #     - name: Upload terraform1 artifact to S3
+  #       run: aws s3 cp ./terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+  #     - name: Upload terraform2 artifact to S3
+  #       run: aws s3 cp ./terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
 
         
