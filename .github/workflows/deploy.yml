@@ -187,6 +187,7 @@ jobs:
 
   
   terraform1_plan:
+    needs: [filter]
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
