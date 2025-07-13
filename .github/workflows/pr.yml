@@ -83,7 +83,9 @@ jobs:
 
       - name: Comment lint/fmt/validate results on PR
         if: failure()
-        uses: GetTerminus/terraform-pr-commenter@v1
+        uses: GetTerminus/terraform-pr-commenter@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   terraform2_security_scan:
     needs: terraform2_lint
@@ -229,7 +231,11 @@ jobs:
 
       - name: Comment lint/fmt/validate results on PR
         if: failure()
-        uses: GetTerminus/terraform-pr-commenter@v1
+        uses: GetTerminus/terraform-pr-commenter@v3
+        env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          comment: true
 
   terraform1_security_scan:
     needs: terraform1_lint
@@ -319,6 +325,8 @@ jobs:
         
 
       - name: Comment Terraform Plan
-        uses: GetTerminus/terraform-pr-commenter@v1
+        uses: GetTerminus/terraform-pr-commenter@v3
         with:
           comment: true
+        env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

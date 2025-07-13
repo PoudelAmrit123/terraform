@@ -7,12 +7,12 @@ resource "aws_s3_bucket" "amrit-bucket" {
 
 
 resource "aws_s3_bucket_versioning" "versioning_bucket" {
-    bucket = aws_s3_bucket.amrit-bucket.id
-    
-    versioning_configuration {
-      status = var.should_enable_versioning ? "Enabled" : "Suspended"
-    }
-  
+  bucket = aws_s3_bucket.amrit-bucket.id
+
+  versioning_configuration {
+    status = var.should_enable_versioning ? "Enabled" : "Suspended"
+  }
+
 }
 
 
