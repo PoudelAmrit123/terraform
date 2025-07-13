@@ -1,6 +1,6 @@
 
 resource "aws_iam_role" "this" {
-  name = "ec2_access_s3_role_v2"
+  name = "ec2_access_s3_role_v5"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -15,7 +15,7 @@ resource "aws_iam_role" "this" {
 }
 
 resource "aws_iam_policy" "this" {
-  name        = "ec2_s3_access_policy_v2"
+  name        = "ec2_s3_access_policy_v5"
   description = "Allow EC2 instance to access S3 bucket"
 
   policy = jsonencode({
@@ -41,7 +41,7 @@ resource "aws_iam_role_policy_attachment" "this" {
 }
 
 resource "aws_iam_instance_profile" "this" {
-  name = var.instance_profile_name_v2
+  name = var.instance_profile_name_v5
   role = aws_iam_role.this.name
 }
 
