@@ -276,6 +276,9 @@ jobs:
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
 
       - name: Install semver CLI
         run: |
@@ -385,11 +388,18 @@ jobs:
         
       # - name: Terraform Apply
       #   run: terraform  -chdir=terraform1 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
-      
-      - name: Terraform Init
-        working-directory: terraform1
-        run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
 
-      - name: Terraform Apply
+      - name: Terraform Init and Apply
         working-directory: terraform1
-        run: terraform apply  -auto-approve
+        run: |
+          terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
+          terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
+
+      
+      # - name: Terraform Init
+      #   working-directory: terraform1
+      #   run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
+
+      # - name: Terraform Apply
+      #   working-directory: terraform1
+      #   run: terraform apply  -auto-approve
