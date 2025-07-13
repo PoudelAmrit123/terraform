@@ -47,7 +47,7 @@ resource "aws_iam_instance_profile" "this" {
 
 resource "aws_instance" "amrit_amazon_server" {
   ami = var.ami_id
-  
+
 
   instance_type = var.instance_type
   # subnet_id                   = aws_subnet.this.id
