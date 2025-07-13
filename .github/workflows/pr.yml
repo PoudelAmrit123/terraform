@@ -198,24 +198,53 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.12.2
-
       - name: TFLint - Setup
-        id: tflint
         uses: terraform-linters/setup-tflint@v3
         with:
           tflint_wrapper_enabled: true
+
       - name: TFLint - Run
+        id: tflint-run
         run: |
-          tflint --version
+          set -o pipefail
           tflint --init
-          tflint
+          tflint | tee result.log
+        continue-on-error: true
+
+      - name: Capture TFLint output and exit code
+        id: tflint-output
+        run: |
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          cat result.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+
       - name: Post TFLint Comment
-        if: ${{ always() && (steps.tflint.outcome == 'success' || steps.tflint.outcome == 'failure') }}
+        if: always()
         uses: GetTerminus/terraform-pr-commenter@dpr-update-commenter
         with:
           commenter_type: tflint
-          commenter_input: ${{ format('{0}{1}', steps.tflint.outputs.stdout, steps.tflint.outputs.stderr) }}
-          commenter_exitcode: ${{ steps.tflint.outputs.exitcode }}
+          commenter_input: ${{ steps.tflint-output.outputs.output }}
+          commenter_exitcode: ${{ steps.tflint-output.outputs.exitcode }}
+
+
+      # - name: TFLint - Setup
+      #   id: tflint
+      #   uses: terraform-linters/setup-tflint@v3
+      #   with:
+      #     tflint_wrapper_enabled: true
+      # - name: TFLint - Run
+      #   run: |
+      #     tflint --version
+      #     tflint --init
+      #     tflint
+      # - name: Post TFLint Comment
+      #   if: ${{ always() && (steps.tflint.outcome == 'success' || steps.tflint.outcome == 'failure') }}
+      #   uses: GetTerminus/terraform-pr-commenter@dpr-update-commenter
+      #   with:
+      #     commenter_type: tflint
+      #     commenter_input: ${{ format('{0}{1}', steps.tflint.outputs.stdout, steps.tflint.outputs.stderr) }}
+      #     commenter_exitcode: ${{ steps.tflint.outputs.exitcode }}
 
 
       - name: Set backend config based on branch
