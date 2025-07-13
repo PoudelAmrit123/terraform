@@ -376,16 +376,16 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform -chdir=terraform1 plan -out=tfplan
-
-      
-        
+        run: |
+         cd terraform1
+         terraform plan -out=tfplan > plan.log
+         echo "exitcode=$?" >> $GITHUB_OUTPUT
 
       - name: Comment Terraform Plan
+        if: always()
         uses: GetTerminus/terraform-pr-commenter@v3
         with:
-          
-          commenter_exitcode: ${{ steps.plan.outcome == 'success' && '0' || '1' }}
+          commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
           commenter_plan_path: terraform1/tfplan
         env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
