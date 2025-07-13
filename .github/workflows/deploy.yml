@@ -293,19 +293,28 @@ jobs:
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Create git tag and push
+        id: tag_push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "terraform1@v${{ steps.new_version.outputs.new_version }}" -m "chore: release terraform1@v${{ steps.new_version.outputs.new_version }}"
-          git push origin "terraform1@v${{ steps.new_version.outputs.new_version }}"
+          new_tag="terraform1@v${{ steps.new_version.outputs.new_version }}"
 
-      
+          # Check if tag exists locally or remotely
+          if git rev-parse "$new_tag" >/dev/null 2>&1 || git ls-remote --tags origin | grep -q "refs/tags/$new_tag$"; then
+            echo "Tag $new_tag already exists. Skipping tagging."
+          else
+            git tag -a "$new_tag" -m "chore: release $new_tag"
+            git push origin "$new_tag"
+          fi
+
+          echo "release_tag=$new_tag" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: "terraform1@v${{ steps.new_version.outputs.new_version }}"
+          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+
 
       - name: Comment new tag on PR
         uses: mshick/add-pr-comment@v2
