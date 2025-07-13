@@ -220,11 +220,13 @@ jobs:
           fi
 
       - name: Terraform Init
-        run: terraform -chdir=terraform1 --backend-config=${{ steps.backend-config.outputs.backend_config }} init 
+        working-directory: terraform1
+        run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
 
       - name: Terraform Plan
         id: plan
-        run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${{ steps.backend-config.outputs.env }}"  plan  
+        working-directory: terraform1
+        run: terraform plan 
 
       # - name: Comment Terraform Plan
       #   uses: GetTerminus/terraform-pr-commenter@v3
