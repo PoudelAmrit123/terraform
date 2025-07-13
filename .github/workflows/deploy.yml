@@ -61,16 +61,22 @@ jobs:
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
             echo "env=dev" >> $GITHUB_OUTPUT
           fi
-      - name: Terraform Init
-        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
+
+      - name: Terraform Init and Plan
+        working-directory: terraform2
+        run: |
+          terraform init --backend-config=backend-dev.hcl -reconfigure
+          terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
+      # - name: Terraform Init
+      #   run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
 
       # - name: Terraform Plan
       #   run: terraform -chdir=terraform2 plan --var="env=${{ steps.backend-config.outputs.env }}"
 
-      - name: Terraform Plan
-        id: plan
-        working-directory: terraform1
-        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
+      # - name: Terraform Plan
+      #   id: plan
+      #   working-directory: terraform1
+      #   run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
 
       # - name: Comment Terraform Plan
       #   uses: GetTerminus/terraform-pr-commenter@v3
