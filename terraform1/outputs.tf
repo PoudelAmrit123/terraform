@@ -1,6 +1,6 @@
 output "instance_id" {
   description = "instance id of the instance"
-  value       = module.ec2_instance.aws_instance_id
+  value       = module.ec2_instance.instance_id
 
 }
 output "instnace_arn" {
