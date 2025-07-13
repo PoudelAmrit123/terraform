@@ -29,7 +29,6 @@ jobs:
 
  
   terraform2_plan:
-    needs: [terraform2_lint, terraform2_security_scan]
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform2_changed == 'true'
     steps:
@@ -47,11 +46,25 @@ jobs:
         with:
           terraform_version: 1.12.2
 
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
       - name: Terraform Init
-        run: terraform -chdir=terraform2 init -backend-config=backend-dev.hcl
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform2 plan -var="env=dev" 
+        run: terraform -chdir=terraform2 plan --var="env=${{ steps.backend-config.outputs.env }}"
 
       - name: Comment Terraform Plan
         uses: GetTerminus/terraform-pr-commenter@v3
@@ -62,7 +75,7 @@ jobs:
       
 
   terraform2_tag_and_release:
-    needs: terraform2_plan
+    needs: [terraform2_plan , terraform1_tag_and_release]
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform2_changed == 'true'
     steps:
@@ -165,18 +178,17 @@ jobs:
             echo "env=dev" >> $GITHUB_OUTPUT
           fi
       - name: Terraform Init
-        run: terraform -chdir=terraform2 init
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
         
       - name: Terraform Apply
-        run: terraform  -chdir=terraform2 apply -auto-approve 
+        run: terraform  -chdir=terraform2 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
 
   
 
   
   terraform1_plan:
-    needs: [terraform1_lint, terraform1_security_scan]
     runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
+    if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
       - uses: actions/checkout@v3
 
@@ -207,10 +219,10 @@ jobs:
           fi
 
       - name: Terraform Init
-        run: terraform -chdir=terraform1 --backend-config=${steps.backend_config.outputs.backend_config} init 
+        run: terraform -chdir=terraform1 --backend-config=${{ steps.backend-config.outputs.backend_config }} init 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${steps.backend_config.outputs.env}"  plan 
+        run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${{ steps.backend-config.outputs.env }}"  plan 
 
       - name: Comment Terraform Plan
         uses: GetTerminus/terraform-pr-commenter@v1
@@ -281,3 +293,36 @@ jobs:
         uses: mshick/add-pr-comment@v1
         with:
           message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
+   
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.12.2
+
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+        
+      - name: Terraform Apply
+        run: terraform  -chdir=terraform1 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 

@@ -51,9 +51,27 @@ jobs:
       - name: Setup tflint
         uses: terraform-linters/setup-tflint@v1
 
-      - name: Terraform Init
-        run: terraform -chdir=terraform2 init 
+      
 
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
+     
       - name: Run tflint and terraform fmt check
         run: |
           cd terraform2
@@ -85,9 +103,25 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
 
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
       - name: Terraform Init
-        run: terraform -chdir=terraform2 init
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
 
       - name: Run tfsec scan and comment
         uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
@@ -113,12 +147,29 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
 
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
       - name: Terraform Init
-        run: terraform  -chdir=terraform2 init 
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform2 plan 
+        run: terraform -chdir=terraform2 plan --var="env=${{ steps.backend-config.outputs.env }}"
+
+
+      
 
       - name: Comment Terraform Plan
         uses: GetTerminus/terraform-pr-commenter@v3
@@ -147,8 +198,25 @@ jobs:
       - name: Setup tflint
         uses: terraform-linters/setup-tflint@v1
 
+
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
       - name: Terraform Init
-        run: terraform -chdir=terraform1 init 
+        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
 
       - name: Run tflint and terraform fmt check
         run: |
@@ -164,7 +232,52 @@ jobs:
         uses: GetTerminus/terraform-pr-commenter@v1
 
   terraform1_security_scan:
-    needs: terraform2_lint
+    needs: terraform1_lint
+    runs-on: ubuntu-latest
+    if: needs.filter.outputs.terraform1_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
+      
+
+      - name: Run tfsec scan and comment
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tfsec_args: --soft-fail
+
+  terraform1_plan:
+    needs: [terraform1_lint, terraform1_security_scan]
     runs-on: ubuntu-latest
     if: needs.filter.outputs.terraform1_changed == 'true'
     steps:
@@ -182,39 +295,28 @@ jobs:
         with:
           terraform_version: 1.12.2
 
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
       - name: Terraform Init
-        run: terraform -chdir=terraform1 init 
-
-      - name: Run tfsec scan and comment
-        uses: aquasecurity/tfsec-pr-commenter-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tfsec_args: --soft-fail
-
-  terraform1_plan:
-    needs: [terraform1_lint, terraform1_security_scan]
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.12.2
-
-      - name: Terraform Init
-        run: terraform -chdir=terraform1 init 
+        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform1 plan 
+        run: terraform -chdir=terraform1 plan --var="env=${{ steps.backend-config.outputs.env }}"
+
+      
+        
 
       - name: Comment Terraform Plan
         uses: GetTerminus/terraform-pr-commenter@v1
