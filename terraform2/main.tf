@@ -27,13 +27,13 @@ locals {
 }
 
 data "terraform_remote_state" "ec2" {
-  backend = "s3"  
+  backend = "s3"
   config = {
-     bucket         = "com.amrit.terraform-backend.lf"
-    key            = "ec2/${var.env}/terraform.tfstate"  
-    region         = "us-east-1"
+    bucket = "com.amrit.terraform-backend.lf"
+    key    = "ec2/${var.env}/terraform.tfstate"
+    region = "us-east-1"
   }
-  
+
 }
 
 module "s3_bucket" {
@@ -56,7 +56,7 @@ module "s3_bucket" {
 resource "aws_s3_bucket_policy" "policy" {
   bucket = module.s3_bucket.bucket_name
 
-  
+
 
   policy = jsonencode({
     Version = "2012-10-17",
