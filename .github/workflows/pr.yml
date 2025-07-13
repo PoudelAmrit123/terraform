@@ -224,7 +224,7 @@ jobs:
       - name: PR comment with file
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: terraform2/plan-clean.txt
+          file-path: plan-clean.txt
 
       # - uses: GetTerminus/terraform-pr-commenter@v3
       #   env:
@@ -454,7 +454,7 @@ jobs:
       - name: PR comment with file
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: terraform1/plan-clean.txt
+          file-path: plan-clean.txt
 
       # - uses: GetTerminus/terraform-pr-commenter@v3
       #   env:
