@@ -212,14 +212,18 @@ jobs:
 
       
 
-      - uses: GetTerminus/terraform-pr-commenter@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - uses: GetTerminus/terraform-pr-commenter@v3
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
+      #   with:
+      #     commenter_type: plan
+      #     commenter_plan_path: tf_plan.txt
+      #     commenter_exitcode: ${{ steps.plan.outputs.exit }}
+      - name: PR comment with file
+        uses: thollander/actions-comment-pull-request@v3
         with:
-          commenter_type: plan
-          commenter_plan_path: tf_plan.txt
-          commenter_exitcode: ${{ steps.plan.outputs.exit }}
+          file-path: tf_plan.txt
   
   terraform1_lint:
     needs: filter
@@ -424,11 +428,16 @@ jobs:
         working-directory: terraform1
         run: terraform plan  |& tee tf_plan.txt
 
-      - uses: GetTerminus/terraform-pr-commenter@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+      - name: PR comment with file
+        uses: thollander/actions-comment-pull-request@v3
         with:
-          commenter_type: plan
-          commenter_plan_path: tf_plan.txt
-          commenter_exitcode: ${{ steps.plan.outputs.exit }}
+          file-path: tf_plan.txt
+
+      # - uses: GetTerminus/terraform-pr-commenter@v3
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      #   with:
+      #     commenter_type: plan
+      #     commenter_plan_path: tf_plan.txt
+      #     commenter_exitcode: ${{ steps.plan.outputs.exit }}
