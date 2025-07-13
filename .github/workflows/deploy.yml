@@ -67,16 +67,7 @@ jobs:
         run: |
           terraform init --backend-config=backend-dev.hcl -reconfigure
           terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
-      # - name: Terraform Init
-      #   run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
-
-      # - name: Terraform Plan
-      #   run: terraform -chdir=terraform2 plan --var="env=${{ steps.backend-config.outputs.env }}"
-
-      # - name: Terraform Plan
-      #   id: plan
-      #   working-directory: terraform1
-      #   run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
+      
 
       # - name: Comment Terraform Plan
       #   uses: GetTerminus/terraform-pr-commenter@v3
@@ -164,11 +155,7 @@ jobs:
 
       
 
-      - name: Create GitHub Release
-        uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+      
 
       # - name: Comment new tag on PR
       #   uses: mshick/add-pr-comment@v2
@@ -202,17 +189,36 @@ jobs:
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
             echo "env=dev" >> $GITHUB_OUTPUT
           fi
-      # - name: Terraform Init
-      #   run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+      
 
       - name: Terraform Init and Apply
         working-directory: terraform2
         run: |
           terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
           terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
-        
-      # - name: Terraform Apply
-      #   run: terraform   -chdir=terraform2 --var="env=${{ steps.backend-config.outputs.env }}"  apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
+
+      - name: Build artifact zip
+        working-directory: terraform2
+        run: |
+          TAG=${{ steps.tag_push.outputs.release_tag }}
+
+          mkdir -p build-artifacts
+          terraform show -no-color > build-artifacts/terraform-output.txt
+          cp terraform.tfstate build-artifacts/
+          zip -r build-artifacts-${TAG}.zip build-artifacts/
+
+      - name: Create GitHub Release and upload artifact
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+          files: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform2-build-artifact-${{ steps.tag_push.outputs.release_tag }}
+          path: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
   
 
@@ -346,11 +352,7 @@ jobs:
 
           echo "release_tag=$new_tag" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
-        uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+      
 
 
       # - name: Comment new tag on PR
@@ -385,11 +387,7 @@ jobs:
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
             
           fi
-      # - name: Terraform Init
-      #   run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
-        
-      # - name: Terraform Apply
-      #   run: terraform  -chdir=terraform1 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
+     
 
       - name: Terraform Init and Apply
         working-directory: terraform1
@@ -397,11 +395,61 @@ jobs:
           terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
           terraform apply   -auto-approve 
 
-      
-      # - name: Terraform Init
-      #   working-directory: terraform1
-      #   run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
+      - name: Build artifact zip
+        working-directory: terraform1
+        run: |
+          TAG=${{ steps.tag_push.outputs.release_tag }}
 
-      # - name: Terraform Apply
-      #   working-directory: terraform1
-      #   run: terraform apply  -auto-approve
+          mkdir -p build-artifacts
+          terraform show -no-color > build-artifacts/terraform-output.txt
+          cp terraform.tfstate build-artifacts/
+          zip -r build-artifacts-${TAG}.zip build-artifacts/
+
+      - name: Create GitHub Release and upload artifact
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+          files: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform1-build-artifact-${{ steps.tag_push.outputs.release_tag }}
+          path: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+      
+  upload_to_s3:
+    needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download terraform1 release artifact
+        uses: dsaltares/fetch-gh-release-asset@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ needs.terraform1_tag_and_release.outputs.release_tag }}
+          filename: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+        id: download_terraform1
+
+      - name: Download terraform2 release artifact
+        uses: dsaltares/fetch-gh-release-asset@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ needs.terraform2_tag_and_release.outputs.release_tag }}
+          filename: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+        id: download_terraform2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload terraform1 artifact to S3
+        run: aws s3 cp ./terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+      - name: Upload terraform2 artifact to S3
+        run: aws s3 cp ./terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+        
