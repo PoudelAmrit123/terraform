@@ -28,160 +28,160 @@ jobs:
               - 'terraform2/**'
 
  
-  terraform2_plan:
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
-    steps:
-      - uses: actions/checkout@v4
+  # terraform2_plan:
+  #   runs-on: ubuntu-latest
+  #   if: needs.filter.outputs.terraform2_changed == 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.2
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: 1.12.2
 
-      - name: Set backend config based on branch
-        id: backend-config
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
+  #     - name: Set backend config based on branch
+  #       id: backend-config
+  #       run: |
+  #         if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+  #           echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+  #           echo "env=dev" >> $GITHUB_OUTPUT
 
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
-            echo "env=prod" >> $GITHUB_OUTPUT
-          else
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-          fi
-      - name: Terraform Init
-        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+  #         elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+  #           echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+  #           echo "env=prod" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+  #           echo "env=dev" >> $GITHUB_OUTPUT
+  #         fi
+  #     - name: Terraform Init
+  #       run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
-      - name: Terraform Plan
-        run: terraform -chdir=terraform2 plan --var="env=${{ steps.backend-config.outputs.env }}"
+  #     - name: Terraform Plan
+  #       run: terraform -chdir=terraform2 plan --var="env=${{ steps.backend-config.outputs.env }}"
 
-      - name: Comment Terraform Plan
-        uses: GetTerminus/terraform-pr-commenter@v3
-        with:
-          comment: true
+  #     - name: Comment Terraform Plan
+  #       uses: GetTerminus/terraform-pr-commenter@v3
+  #       with:
+  #         comment: true
   
 
       
 
-  terraform2_tag_and_release:
-    needs: [terraform2_plan , terraform1_tag_and_release]
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-         fetch-depth: 0
+  # terraform2_tag_and_release:
+  #   needs: [terraform2_plan , terraform1_tag_and_release]
+  #   runs-on: ubuntu-latest
+  #   if: needs.filter.outputs.terraform2_changed == 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #        fetch-depth: 0
 
-      - name: Install semver CLI
-        run: |
-          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
-          chmod +x semver
-          sudo mv semver /usr/local/bin/
+  #     - name: Install semver CLI
+  #       run: |
+  #         wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
+  #         chmod +x semver
+  #         sudo mv semver /usr/local/bin/
 
-      - name: Get latest tag
-        id: get_tag
-        run: |
-              latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
-              if [ -z "$latest_tag" ]; then
-              latest_tag="terraform2@v0.0.0"
-              fi
+  #     - name: Get latest tag
+  #       id: get_tag
+  #       run: |
+  #             latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
+  #             if [ -z "$latest_tag" ]; then
+  #             latest_tag="terraform2@v0.0.0"
+  #             fi
 
-              echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+  #             echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
-      - name: Determine bump type
-        id: bump_type
-        run: |
-          latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
+  #     - name: Determine bump type
+  #       id: bump_type
+  #       run: |
+  #         latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
 
-          if [ -z "$latest_tag" ]; then
-            commits=$(git log --oneline)
-          else
-            commits=$(git log "$latest_tag"..HEAD --oneline)
-          fi
-          bump="patch"
-          if echo "$commits" | grep -Eq "BREAKING CHANGE|!:"; then
-            bump="major"
-          elif echo "$commits" | grep -Eiq "^feat"; then
-            bump="minor"
-          fi
-          echo "bump=$bump" >> $GITHUB_OUTPUT
+  #         if [ -z "$latest_tag" ]; then
+  #           commits=$(git log --oneline)
+  #         else
+  #           commits=$(git log "$latest_tag"..HEAD --oneline)
+  #         fi
+  #         bump="patch"
+  #         if echo "$commits" | grep -Eq "BREAKING CHANGE|!:"; then
+  #           bump="major"
+  #         elif echo "$commits" | grep -Eiq "^feat"; then
+  #           bump="minor"
+  #         fi
+  #         echo "bump=$bump" >> $GITHUB_OUTPUT
 
-      - name: Calculate new version
-        id: new_version
-        run: |
-          current=${{ steps.get_tag.outputs.latest_tag }}
-          current=${current#terraform2@v}
-          bumped=$(semver bump ${{ steps.bump_type.outputs.bump }} $current)
-          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            new_version="${bumped}-dev"
-          else
-            new_version="${bumped}"
-          fi
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+  #     - name: Calculate new version
+  #       id: new_version
+  #       run: |
+  #         current=${{ steps.get_tag.outputs.latest_tag }}
+  #         current=${current#terraform2@v}
+  #         bumped=$(semver bump ${{ steps.bump_type.outputs.bump }} $current)
+  #         if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+  #           new_version="${bumped}-dev"
+  #         else
+  #           new_version="${bumped}"
+  #         fi
+  #         echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
-      - name: Create git tag and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "terraform2@v${{ steps.new_version.outputs.new_version }}" -m "chore: release terraform2@v${{ steps.new_version.outputs.new_version }}"
-          git push origin "terraform2@v${{ steps.new_version.outputs.new_version }}"
-
-      
-
-      - name: Create GitHub Release
-        uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: "terraform2@v${{ steps.new_version.outputs.new_version }}"
-
-      - name: Comment new tag on PR
-        uses: mshick/add-pr-comment@v2
-        with:
-          message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.12.2
+  #     - name: Create git tag and push
+  #       run: |
+  #         git config user.name "github-actions[bot]"
+  #         git config user.email "github-actions[bot]@users.noreply.github.com"
+  #         git tag -a "terraform2@v${{ steps.new_version.outputs.new_version }}" -m "chore: release terraform2@v${{ steps.new_version.outputs.new_version }}"
+  #         git push origin "terraform2@v${{ steps.new_version.outputs.new_version }}"
 
       
-      - name: Set backend config based on branch
-        id: backend-config
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
 
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
-            echo "env=prod" >> $GITHUB_OUTPUT
-          else
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-          fi
-      - name: Terraform Init
-        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+  #     - name: Create GitHub Release
+  #       uses: marvinpinto/action-automatic-releases@latest
+  #       with:
+  #         repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #         automatic_release_tag: "terraform2@v${{ steps.new_version.outputs.new_version }}"
+
+  #     - name: Comment new tag on PR
+  #       uses: mshick/add-pr-comment@v2
+  #       with:
+  #         message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
+
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v2
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
+
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.12.2
+
+      
+  #     - name: Set backend config based on branch
+  #       id: backend-config
+  #       run: |
+  #         if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+  #           echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+  #           echo "env=dev" >> $GITHUB_OUTPUT
+
+  #         elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+  #           echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+  #           echo "env=prod" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+  #           echo "env=dev" >> $GITHUB_OUTPUT
+  #         fi
+  #     - name: Terraform Init
+  #       run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
         
-      - name: Terraform Apply
-        run: terraform  -chdir=terraform2 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
+  #     - name: Terraform Apply
+  #       run: terraform  -chdir=terraform2 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
 
   
 
