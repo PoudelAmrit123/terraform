@@ -4,17 +4,17 @@ variable "region" {
 
 }
 
-variable "account_name" {
-  description = "account name "
-  type        = string
+# variable "account_name" {
+#   description = "account name "
+#   type        = string
 
-}
+# }
 
-variable "account_id" {
-  description = "the account id for creating the bucket policy"
-  type        = number
+# variable "account_id" {
+#   description = "the account id for creating the bucket policy"
+#   type        = number
 
-}
+# }
 variable "should_enable_versioning" {
   description = "The versioning of the bucket"
   type        = bool

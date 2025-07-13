@@ -3,10 +3,10 @@ variable "tags" {
 
 }
 
-variable "account_id" {
-  description = "account id Value"
+# variable "account_id" {
+#   description = "account id Value"
 
-}
+# }
 variable "bucket_name" {
   description = "bucket name to create"
 }
