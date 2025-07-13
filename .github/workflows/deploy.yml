@@ -326,8 +326,16 @@ jobs:
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
             echo "env=dev" >> $GITHUB_OUTPUT
           fi
-      - name: Terraform Init
-        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+      # - name: Terraform Init
+      #   run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
         
+      # - name: Terraform Apply
+      #   run: terraform  -chdir=terraform1 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
+      
+      - name: Terraform Init
+        working-directory: terraform1
+        run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
+
       - name: Terraform Apply
-        run: terraform  -chdir=terraform1 apply --var="env=${{ steps.backend-config.outputs.env }}"   -auto-approve 
+        working-directory: terraform1
+        run: terraform apply --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve
