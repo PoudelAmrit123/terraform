@@ -52,8 +52,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
+          terraform_wrapper: true
           terraform_version: 1.12.2
 
       - name: TFLint - Setup
@@ -137,6 +138,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
+          terraform_wrapper: true
           terraform_version: 1.12.2
       
       - name: Set backend config based on branch
@@ -181,6 +183,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
+          terraform_wrapper: true
           terraform_version: 1.12.2
       
       - name: Set backend config based on branch
@@ -235,6 +238,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
+          terraform_wrapper: true
           terraform_version: 1.12.2
       - name: TFLint - Setup
         uses: terraform-linters/setup-tflint@v3
@@ -348,6 +352,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
+          terraform_wrapper: true
           terraform_version: 1.12.2
       
       - name: Set backend config based on branch
@@ -393,6 +398,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
+          terraform_wrapper: true
           terraform_version: 1.12.2
 
       - name: Set backend config based on branch
