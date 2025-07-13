@@ -20,6 +20,12 @@ variable "should_enable_versioning" {
   type        = bool
   default     = false
 }
+
+variable "env" {
+  description = "env varibable for data backend"
+  type = string
+  default = "dev" 
+}
 # variable "bucket_name" {
 #     description = "the name of the bucket"
 #     type = string

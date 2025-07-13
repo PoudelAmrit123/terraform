@@ -28,73 +28,6 @@ jobs:
               - 'terraform2/**'
 
  
-
-  terraform2_lint:
-    needs: filter
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.12.2
-
-      - name: Setup tflint
-        uses: terraform-linters/setup-tflint@v1
-
-      - name: Terraform Init
-        run: terraform -chdir=terraform2 init 
-
-      - name: Run tflint and terraform fmt check
-        run: |
-          cd terraform2
-          tflint
-          terraform fmt -check
-
-      - name: Terraform Validate
-        run: terraform -chdir=terraform2 validate
-
-      - name: Comment lint/fmt/validate results on PR
-        if: failure()
-        uses: GetTerminus/terraform-pr-commenter@v1
-
-  terraform2_security_scan:
-    needs: terraform2_lint
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.12.2
-
-      - name: Terraform Init
-        run: terraform -chdir=terraform2 init
-
-      - name: Run tfsec scan and comment
-        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tfsec_args: --soft-fail
-
   terraform2_plan:
     needs: [terraform2_lint, terraform2_security_scan]
     runs-on: ubuntu-latest
@@ -115,15 +48,16 @@ jobs:
           terraform_version: 1.12.2
 
       - name: Terraform Init
-        run: terraform  -chdir=terraform2 init 
+        run: terraform -chdir=terraform2 init -backend-config=backend-dev.hcl
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform2 plan -out=tfplan.binary
+        run: terraform -chdir=terraform2 plan -var="env=dev" 
 
       - name: Comment Terraform Plan
         uses: GetTerminus/terraform-pr-commenter@v3
         with:
           comment: true
+  
 
       
 
@@ -215,6 +149,21 @@ jobs:
         with:
           terraform_version: 1.12.2
 
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
       - name: Terraform Init
         run: terraform -chdir=terraform2 init
         
@@ -223,159 +172,112 @@ jobs:
 
   
 
-  # terraform2_lint:
-  #   needs: filter
-  #   runs-on: ubuntu-latest
-  #   if: needs.filter.outputs.terraform2_changed == 'true'
-  #   steps:
-  #     - uses: actions/checkout@v3
+  
+  terraform1_plan:
+    needs: [terraform1_lint, terraform1_security_scan]
+    runs-on: ubuntu-latest
+    if: needs.filter.outputs.terraform2_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v2
-  #       with:
-  #         terraform_version: 1.12.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
 
-  #     - name: Setup tflint
-  #       uses: terraform-linters/setup-tflint@v1
+      - name: Terraform Init
+        run: terraform -chdir=terraform1 --backend-config=${steps.backend_config.outputs.backend_config} init 
 
-  #     - name: Terraform Init
-  #       run: terraform -chdir=terraform2 init 
+      - name: Terraform Plan
+        run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${steps.backend_config.outputs.env}"  plan 
 
-  #     - name: Run tflint and terraform fmt check
-  #       run: |
-  #         cd terraform2
-  #         tflint
-  #         terraform fmt -check
+      - name: Comment Terraform Plan
+        uses: GetTerminus/terraform-pr-commenter@v1
+        with:
+          comment: true
+      
 
-  #     - name: Terraform Validate
-  #       run: terraform -chdir=terraform2 validate
+  terraform1_tag_and_release:
+    needs: terraform1_plan
+    runs-on: ubuntu-latest
+    if: needs.filter.outputs.terraform1_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
 
-  #     - name: Comment lint/fmt/validate results on PR
-  #       if: failure()
-  #       uses: GetTerminus/terraform-pr-commenter@v1
+      - name: Install semver CLI
+        run: |
+          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/semver
+          chmod +x semver
+          sudo mv semver /usr/local/bin/
 
-  # terraform2_security_scan:
-  #   needs: terraform2_lint
-  #   runs-on: ubuntu-latest
-  #   if: needs.filter.outputs.terraform2_changed == 'true'
-  #   steps:
-  #     - uses: actions/checkout@v3
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          latest_tag=$(git describe --tags --match="terraform1@v*" --abbrev=0 || echo "terraform1@v0.0.0")
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-1
+      - name: Determine bump type
+        id: bump_type
+        run: |
+          commits=$(git log ${{ steps.get_tag.outputs.latest_tag }}..HEAD --oneline)
+          bump="patch"
+          if echo "$commits" | grep -q "BREAKING CHANGE"; then
+            bump="major"
+          elif echo "$commits" | grep -Eiq "^feat"; then
+            bump="minor"
+          fi
+          echo "bump=$bump" >> $GITHUB_OUTPUT
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v2
-  #       with:
-  #         terraform_version: 1.12.2
+      - name: Calculate new version
+        id: new_version
+        run: |
+          current=${{ steps.get_tag.outputs.latest_tag }}
+          current=${current#terraform1@v}
+          bumped=$(semver bump ${{ steps.bump_type.outputs.bump }} $current)
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            new_version="${bumped}-dev"
+          else
+            new_version="${bumped}"
+          fi
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
-  #     - name: Terraform Init
-  #       run: terraform -chdir=terraform2 init 
-
-  #     - name: Run tfsec scan and comment
-  #       uses: aquasecurity/tfsec-pr-commenter-action@v1
-  #       with:
-  #         github_token: ${{ secrets.GITHUB_TOKEN }}
-  #         tfsec_args: --soft-fail
-
-  # terraform2_plan:
-  #   needs: [terraform2_lint, terraform2_security_scan]
-  #   runs-on: ubuntu-latest
-  #   if: needs.filter.outputs.terraform2_changed == 'true'
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-1
-
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v2
-  #       with:
-  #         terraform_version: 1.12.2
-
-  #     - name: Terraform Init
-  #       run: terraform -chdir=terraform2 init 
-
-  #     - name: Terraform Plan
-  #       run: terraform -chdir=terraform2 plan -out=tfplan.binary
-
-  #     - name: Comment Terraform Plan
-  #       uses: GetTerminus/terraform-pr-commenter@v1
-  #       with:
-  #         comment: true
+      - name: Create git tag and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "terraform1@v${{ steps.new_version.outputs.new_version }}" -m "chore: release terraform1@v${{ steps.new_version.outputs.new_version }}"
+          git push origin "terraform1@v${{ steps.new_version.outputs.new_version }}"
 
       
 
-  # terraform2_tag_and_release:
-  #   needs: terraform2_plan
-  #   runs-on: ubuntu-latest
-  #   if: needs.filter.outputs.terraform2_changed == 'true'
-  #   steps:
-  #     - uses: actions/checkout@v3
+      - name: Create GitHub Release
+        uses: marvinpinto/action-automatic-releases@v1
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: "terraform1@v${{ steps.new_version.outputs.new_version }}"
 
-  #     - name: Install semver CLI
-  #       run: |
-  #         wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/semver
-  #         chmod +x semver
-  #         sudo mv semver /usr/local/bin/
-
-  #     - name: Get latest tag
-  #       id: get_tag
-  #       run: |
-  #         latest_tag=$(git describe --tags --match="terraform2@v*" --abbrev=0 || echo "terraform2@v0.0.0")
-  #         echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
-
-  #     - name: Determine bump type
-  #       id: bump_type
-  #       run: |
-  #         commits=$(git log ${{ steps.get_tag.outputs.latest_tag }}..HEAD --oneline)
-  #         bump="patch"
-  #         if echo "$commits" | grep -q "BREAKING CHANGE"; then
-  #           bump="major"
-  #         elif echo "$commits" | grep -Eiq "^feat"; then
-  #           bump="minor"
-  #         fi
-  #         echo "bump=$bump" >> $GITHUB_OUTPUT
-
-  #     - name: Calculate new version
-  #       id: new_version
-  #       run: |
-  #         current=${{ steps.get_tag.outputs.latest_tag }}
-  #         current=${current#terraform2@v}
-  #         new_version=$(semver bump ${{ steps.bump_type.outputs.bump }} $current)
-  #         echo "new_version=$new_version" >> $GITHUB_OUTPUT
-
-  #     - name: Create git tag and push
-  #       run: |
-  #         git config user.name "github-actions[bot]"
-  #         git config user.email "github-actions[bot]@users.noreply.github.com"
-  #         git tag -a "terraform2@v${{ steps.new_version.outputs.new_version }}" -m "chore: release terraform2@v${{ steps.new_version.outputs.new_version }}"
-  #         git push origin "terraform2@v${{ steps.new_version.outputs.new_version }}"
-
-      
-
-  #     - name: Create GitHub Release
-  #       uses: marvinpinto/action-automatic-releases@v1
-  #       with:
-  #         repo_token: ${{ secrets.GITHUB_TOKEN }}
-  #         tag: "terraform2@v${{ steps.new_version.outputs.new_version }}"
-
-  #     - name: Comment new tag on PR
-  #       uses: mshick/add-pr-comment@v1
-  #       with:
-  #         message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
+      - name: Comment new tag on PR
+        uses: mshick/add-pr-comment@v1
+        with:
+          message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
