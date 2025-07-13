@@ -1,4 +1,3 @@
-
 terraform {
 
   required_version = ">= 1.12.2"
@@ -78,7 +77,7 @@ resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+  name = "ec2_instance_profile_v6"
   role = aws_iam_role.ec2_role.name
 
 }
