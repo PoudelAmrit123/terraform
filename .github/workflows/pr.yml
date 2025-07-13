@@ -319,7 +319,7 @@ jobs:
         run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform1 plan "
+        run: terraform -chdir=terraform1 plan 
 
       
         
