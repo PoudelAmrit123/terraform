@@ -412,6 +412,8 @@ jobs:
           automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
           files: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
+          
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -428,7 +430,7 @@ jobs:
         with:
           repo: ${{ github.repository }}
           version: ${{ needs.terraform1_tag_and_release.outputs.release_tag }}
-          file: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+          file: build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
           target: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
           token: ${{ secrets.GITHUB_TOKEN}}
         id: download_terraform1
@@ -438,7 +440,7 @@ jobs:
         with:
           repo: ${{ github.repository }}
           version: ${{ needs.terraform2_tag_and_release.outputs.release_tag }}
-          filename: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+          filename: build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
           token: ${{ secrets.GITHUB_TOKEN}}
           target: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
         id: download_terraform2
