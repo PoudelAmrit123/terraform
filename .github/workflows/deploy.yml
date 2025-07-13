@@ -163,7 +163,7 @@ jobs:
       #     message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -215,7 +215,7 @@ jobs:
           files: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform2-build-artifact-${{ steps.tag_push.outputs.release_tag }}
           path: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
@@ -231,7 +231,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -361,7 +361,7 @@ jobs:
       #     message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
    
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -413,7 +413,7 @@ jobs:
           files: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform1-build-artifact-${{ steps.tag_push.outputs.release_tag }}
           path: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
@@ -424,7 +424,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download terraform1 release artifact
-        uses: dsaltares/fetch-gh-release-asset@v1
+        uses: dsaltares/fetch-gh-release-asset@master
         with:
           repository: ${{ github.repository }}
           tag: ${{ needs.terraform1_tag_and_release.outputs.release_tag }}
@@ -432,7 +432,7 @@ jobs:
         id: download_terraform1
 
       - name: Download terraform2 release artifact
-        uses: dsaltares/fetch-gh-release-asset@v1
+        uses: dsaltares/fetch-gh-release-asset@master
         with:
           repository: ${{ github.repository }}
           tag: ${{ needs.terraform2_tag_and_release.outputs.release_tag }}
@@ -440,7 +440,7 @@ jobs:
         id: download_terraform2
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
