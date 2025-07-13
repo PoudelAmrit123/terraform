@@ -1,6 +1,6 @@
 variable "region" {
   description = "region for the aws"
-  type = string
+  type        = string
 
 }
 # variable "ami_id" {
@@ -10,7 +10,7 @@ variable "region" {
 
 variable "key_name" {
   description = "The key value pair for the instance"
-  type = string
+  type        = string
 
 }
 
