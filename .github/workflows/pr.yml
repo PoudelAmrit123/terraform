@@ -216,7 +216,15 @@ jobs:
           terraform plan --var="env=${{ steps.backend-config.outputs.env }}" |& tee tf_plan.txt
 
 
-      
+      - name: Strip ANSI characters
+        run: |
+          pip install ansi2txt
+          cat terraform2/tf_plan.txt | ansi2txt > plan-clean.txt
+
+      - name: PR comment with file
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: terraform2/plan-clean.txt
 
       # - uses: GetTerminus/terraform-pr-commenter@v3
       #   env:
@@ -226,10 +234,7 @@ jobs:
       #     commenter_type: plan
       #     commenter_plan_path: tf_plan.txt
       #     commenter_exitcode: ${{ steps.plan.outputs.exit }}
-      - name: PR comment with file
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          file-path: terraform2/tf_plan.txt
+      
   
   terraform1_lint:
     needs: filter
@@ -441,10 +446,15 @@ jobs:
         working-directory: terraform1
         run: terraform plan  |& tee tf_plan.txt
 
+      - name: Strip ANSI characters
+        run: |
+          pip install ansi2txt
+          cat terraform1/tf_plan.txt | ansi2txt > plan-clean.txt
+
       - name: PR comment with file
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: terraform1/tf_plan.txt
+          file-path: terraform1/plan-clean.txt
 
       # - uses: GetTerminus/terraform-pr-commenter@v3
       #   env:
