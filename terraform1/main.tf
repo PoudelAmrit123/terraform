@@ -1,7 +1,7 @@
 
 terraform {
 
-   required_version = ">= 1.12.2"
+  required_version = ">= 1.12.2"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -18,17 +18,17 @@ provider "aws" {
 
 locals {
   tags = {
-    
-   
-    Creator     = "amrit"
-    
+
+
+    Creator = "amrit"
+
 
   }
 
   config = {
-    instance_type             = "t2.micro"
-    ami_id                    = "ami-05ffe3c48a9991133"
-    
+    instance_type = "t2.micro"
+    ami_id        = "ami-05ffe3c48a9991133"
+
   }
 }
 
@@ -47,7 +47,7 @@ resource "aws_iam_role" "ec2_role" {
       Action = "sts:AssumeRole"
     }]
   })
-  
+
 }
 
 resource "aws_iam_policy" "s3_access_policy" {
@@ -57,8 +57,8 @@ resource "aws_iam_policy" "s3_access_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = [
+      Effect = "Allow"
+      Action = [
         "s3:GetObject",
         "s3:PutObject",
         "s3:ListBucket"
@@ -74,29 +74,29 @@ resource "aws_iam_policy" "s3_access_policy" {
 resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = aws_iam_policy.s3_access_policy.arn
-  
+
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "ec2_instance_profile"
   role = aws_iam_role.ec2_role.name
-  
+
 }
 
 
 
 module "ec2_instance" {
-      count          = terraform.workspace == "prod" ? 1 : 1
-      source         = "./../module/ec2"
-      ami_id         = local.config.ami_id
-      instance_type  = local.config.instance_type
-      tags           = merge(
-        local.tags , {
-        Name = "EC2 Instance"
+  count         = terraform.workspace == "prod" ? 1 : 1
+  source        = "./../module/ec2"
+  ami_id        = local.config.ami_id
+  instance_type = local.config.instance_type
+  tags = merge(
+    local.tags, {
+      Name = "EC2 Instance"
 
-    })
-    key_name = var.key_name
+  })
+  key_name = var.key_name
 
-   s3_bucket_arn = "arn:aws:s3:::com.amrit.terraform-backend.lf"
-  
+  s3_bucket_arn = "arn:aws:s3:::com.amrit.terraform-backend.lf"
+
 }
