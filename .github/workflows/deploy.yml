@@ -305,10 +305,10 @@ jobs:
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: "terraform1@v${{ steps.new_version.outputs.new_version }}"
+          automatic_release_tag: "terraform1@v${{ steps.new_version.outputs.new_version }}"
 
       - name: Comment new tag on PR
-        uses: mshick/add-pr-comment@v1
+        uses: mshick/add-pr-comment@v2
         with:
           message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
    
