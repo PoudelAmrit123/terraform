@@ -204,7 +204,7 @@ jobs:
 
           mkdir -p build-artifacts
           terraform show -no-color > build-artifacts/terraform-output.txt
-          cp terraform.tfstate build-artifacts/
+          
           zip -r build-artifacts-${TAG}.zip build-artifacts/
 
       - name: Create GitHub Release and upload artifact
@@ -402,7 +402,7 @@ jobs:
 
           mkdir -p build-artifacts
           terraform show -no-color > build-artifacts/terraform-output.txt
-          cp terraform.tfstate build-artifacts/
+          
           zip -r build-artifacts-${TAG}.zip build-artifacts/
 
       - name: Create GitHub Release and upload artifact
