@@ -376,17 +376,12 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform -chdir=terraform1 plan -out=tfplan
-
-
-      - name: Set exit code for PR commenter
-        run: echo "COMMENT_EXITCODE=0" >> $GITHUB_ENV
-
-      - name: Comment Terraform Plan
-        uses: GetTerminus/terraform-pr-commenter@v3
-        with:
-          commenter_plan_path: terraform1/tfplan
+        run: terraform --chdir=terraform1 plan -lock=false -input=false |& tee tf_plan.txt
+      - uses: GetTerminus/terraform-pr-commenter@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMENT_EXITCODE: ${{ env.COMMENT_EXITCODE }}
-
+          
+        with:
+          commenter_type: plan
+          commenter_plan_path: tf_plan.txt
+          commenter_exitcode: ${{ steps.plan.outputs.exit }}
