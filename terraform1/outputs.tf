@@ -5,7 +5,7 @@ output "instance_id" {
 }
 output "instnace_arn" {
   description = "arn value of the instance"
-  value       = module.ec2_instance.aws_instance_arn
+  value       = module.ec2_instance.instance_arn
 
 }
 

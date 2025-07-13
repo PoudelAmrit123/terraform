@@ -8,6 +8,8 @@ output "instance_id" {
   value       = aws_instance.amrit_amazon_server.id
 }
 
+
+
 output "instance_arn" {
   description = "The ARN of the EC2 instance"
   value       = aws_instance.amrit_amazon_server.arn
