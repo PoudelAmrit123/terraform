@@ -222,6 +222,7 @@ jobs:
         run: terraform -chdir=terraform1 --backend-config=${{ steps.backend-config.outputs.backend_config }} init 
 
       - name: Terraform Plan
+        id: plan
         run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${{ steps.backend-config.outputs.env }}"  plan  -out=tfplan
 
       - name: Comment Terraform Plan

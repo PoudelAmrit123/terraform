@@ -197,8 +197,23 @@ jobs:
         with:
           terraform_version: 1.12.2
 
-      - name: Setup tflint
-        uses: terraform-linters/setup-tflint@v1
+      - name: TFLint - Setup
+        id: tflint
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_wrapper_enabled: true
+      - name: TFLint - Run
+        run: |
+          tflint --version
+          tflint --init
+          tflint
+      - name: Post TFLint Comment
+        if: ${{ always() && (steps.tflint.outcome == 'success' || steps.tflint.outcome == 'failure') }}
+        uses: GetTerminus/terraform-pr-commenter@dpr-update-commenter
+        with:
+          commenter_type: tflint
+          commenter_input: ${{ format('{0}{1}', steps.tflint.outputs.stdout, steps.tflint.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.tflint.outputs.exitcode }}
 
 
       - name: Set backend config based on branch
@@ -227,15 +242,25 @@ jobs:
           terraform fmt -check
 
       - name: Terraform Validate
+        id: validate
         run: terraform -chdir=terraform1 validate
 
-      - name: Comment lint/fmt/validate results on PR
-        if: failure()
+      - name: Post TF Validate Comment
+        if: ${{ always() && (steps.validate.outcome == 'success' || steps.validate.outcome == 'failure') }}
         uses: GetTerminus/terraform-pr-commenter@v3
-        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          comment: true
+          commenter_type: validate
+          commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.validate.outputs.exitcode }}
+         
+
+      # - name: Comment lint/fmt/validate results on PR
+      #   if: failure()
+      #   uses: GetTerminus/terraform-pr-commenter@v3
+      #   env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     comment: true
 
   terraform1_security_scan:
     needs: terraform1_lint
@@ -319,6 +344,7 @@ jobs:
         run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
 
       - name: Terraform Plan
+        id: plan
         run: terraform -chdir=terraform1 plan -out=tfplan
 
       
