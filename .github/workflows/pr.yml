@@ -327,7 +327,7 @@ jobs:
       - name: Comment Terraform Plan
         uses: GetTerminus/terraform-pr-commenter@v3
         with:
-          comment: true
+          
           commenter_exitcode: ${{ steps.plan.outcome == 'success' && '0' || '1' }}
           commenter_plan_path: terraform1/tfplan
         env:

@@ -222,12 +222,16 @@ jobs:
         run: terraform -chdir=terraform1 --backend-config=${{ steps.backend-config.outputs.backend_config }} init 
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${{ steps.backend-config.outputs.env }}"  plan 
+        run: terraform -chdir=terraform1  --backend-config=backend-dev.hcl -var="env=${{ steps.backend-config.outputs.env }}"  plan  -out=tfplan
 
       - name: Comment Terraform Plan
-        uses: GetTerminus/terraform-pr-commenter@v1
+        uses: GetTerminus/terraform-pr-commenter@v3
         with:
-          comment: true
+          
+          commenter_exitcode: ${{ steps.plan.outcome == 'success' && '0' || '1' }}
+          commenter_plan_path: terraform1/tfplan
+        env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
 
   terraform1_tag_and_release:
