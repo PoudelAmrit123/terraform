@@ -205,10 +205,12 @@ jobs:
         run: |
           TAG=${{ steps.tag_push.outputs.release_tag }}
 
-          mkdir -p build-artifacts
-          terraform show -no-color > build-artifacts/terraform-output.txt
-          
-          zip -r build-artifacts-${TAG}.zip build-artifacts/
+          mkdir -p ../artifact-content/module
+          cp -r . ../artifact-content/terraform2
+          cp -r ../module/s3 ../artifact-content/module/s3
+
+          cd ../artifact-content
+          zip -r ../build-artifacts-${TAG}.zip ./*
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
@@ -408,10 +410,12 @@ jobs:
         run: |
           TAG=${{ steps.tag_push.outputs.release_tag }}
 
-          mkdir -p build-artifacts
-          terraform show -no-color > build-artifacts/terraform-output.txt
-          
-          zip -r build-artifacts-${TAG}.zip build-artifacts/
+          mkdir -p ../artifact-content/module
+          cp -r . ../artifact-content/terraform1
+          cp -r ../module/ec2 ../artifact-content/module/ec2
+
+          cd ../artifact-content
+          zip -r ../build-artifacts-${TAG}.zip ./*
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
@@ -431,6 +435,7 @@ jobs:
 
   upload_to_s3:
     needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+    if: ${{ always() && (needs.terraform1_tag_and_release.result == 'success' || needs.terraform2_tag_and_release.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download terraform1 artifact
