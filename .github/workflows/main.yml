@@ -1,13 +1,16 @@
-name: Terraform push for testing.
+name: Terraform Main push.
 
 on:
   push:
     branches:
-      - dev
+      - main
       
 
 permissions:
-  contents: write  
+  contents: write
+  pull-requests: write
+  id-token: write
+  issues: write
 
 jobs:
   filter:
@@ -17,69 +20,28 @@ jobs:
       terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Get Previous Commit
+        id: prev-commit
+        run: echo "PREV_COMMIT=$(git rev-parse HEAD^1)" >> $GITHUB_ENV
 
       - name: Filter paths for terraform projects
         id: filter
         uses: dorny/paths-filter@v2
         with:
+          base: ${{ env.PREV_COMMIT }}
           filters: |
             terraform1:
               - 'terraform1/**'
             terraform2:
               - 'terraform2/**'
 
- 
-  terraform2_plan:
-    needs: [filter]
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform2_changed == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.2
-
-      - name: Set backend config based on branch
-        id: backend-config
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
-            echo "env=prod" >> $GITHUB_OUTPUT
-          else
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Terraform Init and Plan
-        working-directory: terraform2
-        run: |
-          terraform init --backend-config=backend-dev.hcl -reconfigure
-          terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
-      
-
-      # - name: Comment Terraform Plan
-      #   uses: GetTerminus/terraform-pr-commenter@v3
-      #   with:
-      #     comment: true
-  
-
       
 
   terraform2_tag_and_release:
-    needs: [terraform2_plan ]
+    needs: [filter ]
     runs-on: ubuntu-latest
     permissions:
      pull-requests: write
@@ -194,21 +156,14 @@ jobs:
           fi
       
 
-      - name: Terraform Init and Apply
-        working-directory: terraform2
-        run: |
-          terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
-          terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
+       
 
       - name: Build artifact zip
         working-directory: terraform2
         run: |
           TAG=${{ steps.tag_push.outputs.release_tag }}
 
-          mkdir -p build-artifacts
-          terraform show -no-color > build-artifacts/terraform-output.txt
-          
-          zip -r build-artifacts-${TAG}.zip build-artifacts/
+          zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
@@ -223,66 +178,10 @@ jobs:
           name: terraform2-build-artifact-${{ steps.tag_push.outputs.release_tag }}
           path: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
-  
-
-  
-  terraform1_plan:
-    needs: [filter]
-    runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform1_changed == 'true'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.12.2
-      
-      - name: Set backend config based on branch
-        id: backend-config
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-            
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
-            echo "env=prod" >> $GITHUB_OUTPUT
-            
-          else
-            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-           
-          fi
-
-      - name: Terraform Init
-        working-directory: terraform1
-        run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
-
-      - name: Terraform Plan
-        id: plan
-        working-directory: terraform1
-        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
-
-      # - name: Comment Terraform Plan
-      #   uses: GetTerminus/terraform-pr-commenter@v3
-      #   with:
-          
-      #     commenter_exitcode: ${{ steps.plan.outcome == 'success' && '0' || '1' }}
-      #     commenter_plan_path: terraform1/tfplan
-      #   env:
-      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
 
   terraform1_tag_and_release:
-    needs: terraform1_plan
+    needs: [ filter ]
     permissions:
      pull-requests: write
      contents: write
@@ -397,21 +296,14 @@ jobs:
           fi
      
 
-      - name: Terraform Init and Apply
-        working-directory: terraform1
-        run: |
-          terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
-          terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
+      
 
       - name: Build artifact zip
         working-directory: terraform1
         run: |
           TAG=${{ steps.tag_push.outputs.release_tag }}
 
-          mkdir -p build-artifacts
-          terraform show -no-color > build-artifacts/terraform-output.txt
-          
-          zip -r build-artifacts-${TAG}.zip build-artifacts/
+          zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
