@@ -61,13 +61,13 @@ jobs:
           terraform_version: 1.12.2
 
       - name: Terraform Init
-        working-directory: ${{ env.PROJECT }}
+        working-directory: ${{ env.PROJECT }}/${{ env.PROJECT }}
         run: |
          echo "${{ env.PROJECT }}"
          terraform init --backend-config=backend-${{ env.ENV }}.hcl -reconfigure
 
       - name: Terraform Apply
-        working-directory: ${{ env.PROJECT }}
+        working-directory: ${{ env.PROJECT }}/${{ env.PROJECT }}
         run: terraform apply --var="env=${{env.ENV }}" -auto-approve
 
 
