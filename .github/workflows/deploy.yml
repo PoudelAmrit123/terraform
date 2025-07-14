@@ -400,7 +400,7 @@ jobs:
         working-directory: terraform1
         run: |
           terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }} -reconfigure
-          terraform apply   -auto-approve 
+          terraform apply  --var="env=${{ steps.backend-config.outputs.env }}" -auto-approve 
 
       - name: Build artifact zip
         working-directory: terraform1
