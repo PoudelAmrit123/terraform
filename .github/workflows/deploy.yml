@@ -268,7 +268,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: terraform1
-        run: terraform plan 
+        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}"
 
       # - name: Comment Terraform Plan
       #   uses: GetTerminus/terraform-pr-commenter@v3
