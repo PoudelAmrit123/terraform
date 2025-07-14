@@ -1,0 +1,391 @@
+name: Terraform Main push.
+
+on:
+  push:
+    branches:
+      - main
+      
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+  issues: write
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      terraform2_changed: ${{ steps.filter.outputs.terraform2 }}
+      terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Get Previous Commit
+        id: prev-commit
+        run: echo "PREV_COMMIT=$(git rev-parse HEAD^1)" >> $GITHUB_ENV
+
+      - name: Filter paths for terraform projects
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          base: ${{ env.PREV_COMMIT }}
+          filters: |
+            terraform1:
+              - 'terraform1/**'
+            terraform2:
+              - 'terraform2/**'
+
+      
+
+  terraform2_tag_and_release:
+    needs: [filter ]
+    runs-on: ubuntu-latest
+    permissions:
+     pull-requests: write
+     contents: write
+    if: needs.filter.outputs.terraform2_changed == 'true'
+    outputs:
+       release_tag: ${{ steps.tag_push.outputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+         fetch-depth: 0
+
+      - name: Install semver CLI
+        run: |
+          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
+          chmod +x semver
+          sudo mv semver /usr/local/bin/
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+              latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
+              if [ -z "$latest_tag" ]; then
+              latest_tag="terraform2@v0.0.0"
+              fi
+
+              echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+      - name: Determine bump type
+        id: bump_type
+        run: |
+          latest_tag=$(git tag --list "terraform2@v*" --sort=-creatordate | head -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            commits=$(git log --oneline)
+          else
+            commits=$(git log "$latest_tag"..HEAD --oneline)
+          fi
+          bump="patch"
+          if echo "$commits" | grep -Eq "BREAKING CHANGE|!:"; then
+            bump="major"
+          elif echo "$commits" | grep -Eiq "^feat"; then
+            bump="minor"
+          fi
+          echo "bump=$bump" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          current=${{ steps.get_tag.outputs.latest_tag }}
+          current=${current#terraform2@v}
+          bumped=$(semver bump ${{ steps.bump_type.outputs.bump }} $current)
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            new_version="${bumped}-dev"
+          else
+            new_version="${bumped}"
+          fi
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Create git tag and push
+        id: tag_push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          new_tag="terraform2@v${{ steps.new_version.outputs.new_version }}"
+
+          # Check if tag exists locally or remotely
+          if git rev-parse "$new_tag" >/dev/null 2>&1 || git ls-remote --tags origin | grep -q "refs/tags/$new_tag$"; then
+            echo "Tag $new_tag already exists. Skipping tagging."
+          else
+            git tag -a "$new_tag" -m "chore: release $new_tag"
+            git push origin "$new_tag"
+          fi
+
+          echo "release_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      
+
+      
+
+      # - name: Comment new tag on PR
+      #   uses: mshick/add-pr-comment@v2
+      #   with:
+      #     message: "Created new release tag: terraform2@v${{ steps.new_version.outputs.new_version }}"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.12.2
+
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      
+
+       
+
+      - name: Build artifact zip
+        working-directory: terraform2
+        run: |
+          TAG=${{ steps.tag_push.outputs.release_tag }}
+
+          zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
+
+      - name: Create GitHub Release and upload artifact
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+          files: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform2-build-artifact-${{ steps.tag_push.outputs.release_tag }}
+          path: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+      
+
+  terraform1_tag_and_release:
+    needs: [ filter ]
+    permissions:
+     pull-requests: write
+     contents: write
+    runs-on: ubuntu-latest
+    if: needs.filter.outputs.terraform1_changed == 'true'
+    outputs:
+     release_tag: ${{ steps.tag_push.outputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+
+      - name: Install semver CLI
+        run: |
+          wget https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
+          chmod +x semver
+          sudo mv semver /usr/local/bin/
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+              latest_tag=$(git tag --list "terraform1@v*" --sort=-creatordate | head -n 1)
+              if [ -z "$latest_tag" ]; then
+              latest_tag="terraform1@v0.0.0"
+              fi
+
+              echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+      - name: Determine bump type
+        id: bump_type
+        run: |
+          latest_tag=$(git tag --list "terraform1@v*" --sort=-creatordate | head -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            commits=$(git log --oneline)
+          else
+            commits=$(git log "$latest_tag"..HEAD --oneline)
+          fi
+          bump="patch"
+          if echo "$commits" | grep -Eq "BREAKING CHANGE|!:"; then
+            bump="major"
+          elif echo "$commits" | grep -Eiq "^feat"; then
+            bump="minor"
+          fi
+          echo "bump=$bump" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          current=${{ steps.get_tag.outputs.latest_tag }}
+          current=${current#terraform1@v}
+          bumped=$(semver bump ${{ steps.bump_type.outputs.bump }} $current)
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            new_version="${bumped}-dev"
+          else
+            new_version="${bumped}"
+          fi
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Create git tag and push
+        id: tag_push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          new_tag="terraform1@v${{ steps.new_version.outputs.new_version }}"
+
+          # Check if tag exists locally or remotely
+          if git rev-parse "$new_tag" >/dev/null 2>&1 || git ls-remote --tags origin | grep -q "refs/tags/$new_tag$"; then
+            echo "Tag $new_tag already exists. Skipping tagging."
+          else
+            git tag -a "$new_tag" -m "chore: release $new_tag"
+            git push origin "$new_tag"
+          fi
+
+          echo "release_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      
+
+
+      # - name: Comment new tag on PR
+      #   uses: mshick/add-pr-comment@v2
+      #   with:
+      #     message: "Created new release tag: terraform1@v${{ steps.new_version.outputs.new_version }}"
+   
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.12.2
+
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            
+          fi
+     
+
+      
+
+      - name: Build artifact zip
+        working-directory: terraform1
+        run: |
+          TAG=${{ steps.tag_push.outputs.release_tag }}
+
+          zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
+
+      - name: Create GitHub Release and upload artifact
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
+          files: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+          
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform1-build-artifact-${{ steps.tag_push.outputs.release_tag }}
+          path: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+
+
+  upload_to_s3:
+    needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download terraform1 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform1-build-artifact-${{ needs.terraform1_tag_and_release.outputs.release_tag }}
+          path: terraform1/
+
+      - name: Download terraform2 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform2-build-artifact-${{ needs.terraform2_tag_and_release.outputs.release_tag }}
+          path: terraform2/
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload terraform1 artifact to S3
+        run: aws s3 cp terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+      - name: Upload terraform2 artifact to S3
+        run: aws s3 cp terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+
+  # upload_to_s3:
+  #   needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download terraform1 release artifact
+  #       uses: dsaltares/fetch-gh-release-asset@master
+  #       with:
+  #         repo: ${{ github.repository }}
+  #         version: terraform1@${{ needs.terraform1_tag_and_release.outputs.release_tag }}
+  #         file: build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+  #         target: terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip
+  #         token: ${{ secrets.GITHUB_TOKEN}}
+  #       id: download_terraform1
+
+  #     - name: Download terraform2 release artifact
+  #       uses: dsaltares/fetch-gh-release-asset@master
+  #       with:
+  #         repo: ${{ github.repository }}
+  #         version: terraform2@${{ needs.terraform2_tag_and_release.outputs.release_tag }}
+  #         file: build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+  #         token: ${{ secrets.GITHUB_TOKEN}}
+  #         target: terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip
+  #       id: download_terraform2
+
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
+
+  #     - name: Upload terraform1 artifact to S3
+  #       run: aws s3 cp ./terraform1/build-artifacts-${{ needs.terraform1_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+  #     - name: Upload terraform2 artifact to S3
+  #       run: aws s3 cp ./terraform2/build-artifacts-${{ needs.terraform2_tag_and_release.outputs.release_tag }}.zip s3://com.amrit.terraform-backend.lf/artifacts/
+
+        

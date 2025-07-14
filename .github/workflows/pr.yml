@@ -1,0 +1,472 @@
+name: Terraform PR Checks
+
+on:
+  pull_request:
+    branches:
+      - dev
+      
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TF_WORKSPACE: "example"
+  TF_VERSION: "1.4.6"
+
+jobs:
+
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      terraform2_changed: ${{ steps.filter.outputs.terraform2 }}
+      terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Filter paths for terraform projects
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            terraform1:
+              - 'terraform1/**'
+            terraform2:
+              - 'terraform2/**'
+
+
+    
+  
+  terraform2_lint:
+    needs: filter
+    runs-on: ubuntu-latest
+    if: needs.filter.outputs.terraform2_changed == 'true'
+    permissions:
+      pull-requests: write 
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: true
+          terraform_version: 1.12.2
+
+      - name: TFLint - Setup
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_wrapper_enabled: true
+
+      - name: TFLint - Run
+        id: tflint-run
+        run: |
+          set -o pipefail
+          tflint --init
+          tflint | tee result.log
+        continue-on-error: true
+
+      - name: Capture TFLint output and exit code
+        id: tflint-output
+        run: |
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          cat result.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+
+      - name: Post TFLint Comment
+        if: always()
+        uses: GetTerminus/terraform-pr-commenter@dpr-update-commenter
+        with:
+          commenter_type: tflint
+          commenter_input: ${{ steps.tflint-output.outputs.output }}
+          commenter_exitcode: ${{ steps.tflint-output.outputs.exitcode }}
+
+      
+
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
+     
+      - name: Run tflint and terraform fmt check
+        run: |
+          cd terraform2
+          tflint
+          terraform fmt -check
+
+      - name: Post TF Validate Comment
+        if: ${{ always() && (steps.validate.outcome == 'success' || steps.validate.outcome == 'failure') }}
+        uses: GetTerminus/terraform-pr-commenter@v3
+        with:
+          commenter_type: validate
+          commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.validate.outputs.exitcode }}
+
+  terraform2_security_scan:
+    needs: terraform2_lint
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
+    if: needs.filter.outputs.terraform2_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: true
+          terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform2 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
+
+      - name: Run tfsec scan and comment
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tfsec_args: --soft-fail
+
+  terraform2_plan:
+    needs: [terraform2_lint, terraform2_security_scan]
+    runs-on: ubuntu-latest
+    if: needs.filter.outputs.terraform2_changed == 'true'
+    permissions:
+      pull-requests: write 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: true
+          terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+     
+
+      - name: Terraform Init and Plan
+        working-directory: terraform2
+        id: plan
+        run: |
+          terraform init --backend-config=backend-dev.hcl -reconfigure
+          terraform plan --var="env=${{ steps.backend-config.outputs.env }}" |& tee tf_plan.txt
+
+
+      - name: Strip ANSI characters
+        run: |
+          pip install ansi2txt
+          cat terraform2/tf_plan.txt | ansi2txt > plan-clean.txt
+
+      - name: PR comment with file
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: plan-clean.txt
+
+      # - uses: GetTerminus/terraform-pr-commenter@v3
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      #   with:
+      #     commenter_type: plan
+      #     commenter_plan_path: tf_plan.txt
+      #     commenter_exitcode: ${{ steps.plan.outputs.exit }}
+      
+  
+  terraform1_lint:
+    needs: filter
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
+    if: needs.filter.outputs.terraform1_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: true
+          terraform_version: 1.12.2
+      - name: TFLint - Setup
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_wrapper_enabled: true
+
+      - name: TFLint - Run
+        id: tflint-run
+        run: |
+          set -o pipefail
+          tflint --init
+          tflint | tee result.log
+        continue-on-error: true
+
+      - name: Capture TFLint output and exit code
+        id: tflint-output
+        run: |
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          cat result.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+
+      - name: Post TFLint Comment
+        if: always()
+        uses: GetTerminus/terraform-pr-commenter@dpr-update-commenter
+        with:
+          commenter_type: tflint
+          commenter_input: ${{ steps.tflint-output.outputs.output }}
+          commenter_exitcode: ${{ steps.tflint-output.outputs.exitcode }}
+
+
+      # - name: TFLint - Setup
+      #   id: tflint
+      #   uses: terraform-linters/setup-tflint@v3
+      #   with:
+      #     tflint_wrapper_enabled: true
+      # - name: TFLint - Run
+      #   run: |
+      #     tflint --version
+      #     tflint --init
+      #     tflint
+      # - name: Post TFLint Comment
+      #   if: ${{ always() && (steps.tflint.outcome == 'success' || steps.tflint.outcome == 'failure') }}
+      #   uses: GetTerminus/terraform-pr-commenter@dpr-update-commenter
+      #   with:
+      #     commenter_type: tflint
+      #     commenter_input: ${{ format('{0}{1}', steps.tflint.outputs.stdout, steps.tflint.outputs.stderr) }}
+      #     commenter_exitcode: ${{ steps.tflint.outputs.exitcode }}
+
+
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
+
+      - name: Run tflint and terraform fmt check
+        run: |
+          cd terraform1
+          tflint
+          terraform fmt -check
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform -chdir=terraform1 validate
+
+      - name: Post TF Validate Comment
+        if: ${{ always() && (steps.validate.outcome == 'success' || steps.validate.outcome == 'failure') }}
+        uses: GetTerminus/terraform-pr-commenter@v3
+        with:
+          commenter_type: validate
+          commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.validate.outputs.exitcode }}
+         
+
+      # - name: Comment lint/fmt/validate results on PR
+      #   if: failure()
+      #   uses: GetTerminus/terraform-pr-commenter@v3
+      #   env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     comment: true
+
+  terraform1_security_scan:
+    needs: terraform1_lint
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
+    if: needs.filter.outputs.terraform1_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: true
+          terraform_version: 1.12.2
+      
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+            
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+            
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+            
+          fi
+      - name: Terraform Init
+        run: terraform -chdir=terraform1 init  --backend-config=${{ steps.backend-config.outputs.backend_config }} 
+
+      
+      
+
+      - name: Run tfsec scan and comment
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tfsec_args: --soft-fail
+
+  terraform1_plan:
+    needs: [terraform1_lint, terraform1_security_scan]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write 
+     
+    if: needs.filter.outputs.terraform1_changed == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: true
+          terraform_version: 1.12.2
+
+      - name: Set backend config based on branch
+        id: backend-config
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+            
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+            
+          else
+            echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+            
+          fi
+      - name: Terraform Init
+        working-directory: terraform1
+        run: terraform init --backend-config=${{ steps.backend-config.outputs.backend_config }}
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: terraform1
+        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}" |& tee tf_plan.txt
+
+      - name: Strip ANSI characters
+        run: |
+          pip install ansi2txt
+          cat terraform1/tf_plan.txt | ansi2txt > plan-clean.txt
+
+      - name: PR comment with file
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: plan-clean.txt
+
+      # - uses: GetTerminus/terraform-pr-commenter@v3
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      #   with:
+      #     commenter_type: plan
+      #     commenter_plan_path: tf_plan.txt
+      #     commenter_exitcode: ${{ steps.plan.outputs.exit }}
