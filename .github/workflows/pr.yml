@@ -450,7 +450,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: terraform1
-        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }} |& tee tf_plan.txt
+        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}" |& tee tf_plan.txt
 
       - name: Strip ANSI characters
         run: |
