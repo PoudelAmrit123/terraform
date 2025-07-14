@@ -164,7 +164,7 @@ jobs:
           TAG=${{ steps.tag_push.outputs.release_tag }}
           mkdir -p ../artifact-content/module
           cp -r . ../artifact-content/terraform2
-          cp -r ../module/s3 ../artifact-content/module/ec2
+          cp -r ../module/s3 ../artifact-content/module/s3
           cd ../artifact-content
           zip -r ../build-artifacts-${TAG}.zip ./*
 
