@@ -168,6 +168,8 @@ jobs:
           cd ../artifact-content
           zip -r ../build-artifacts-${TAG}.zip ./*
 
+          zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
+
           
 
       - name: Create GitHub Release and upload artifact
