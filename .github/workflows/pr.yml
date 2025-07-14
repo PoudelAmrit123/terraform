@@ -60,7 +60,7 @@ jobs:
           terraform_version: 1.12.2
 
       - name: TFLint - Setup
-        uses: terraform-linters/setup-tflint@v3
+        uses: terraform-linters/setup-tflint@v4
         with:
           tflint_wrapper_enabled: true
 
@@ -258,7 +258,7 @@ jobs:
           terraform_wrapper: true
           terraform_version: 1.12.2
       - name: TFLint - Setup
-        uses: terraform-linters/setup-tflint@v3
+        uses: terraform-linters/setup-tflint@4
         with:
           tflint_wrapper_enabled: true
 
