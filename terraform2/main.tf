@@ -31,12 +31,14 @@ locals {
 data "terraform_remote_state" "ec2" {
   backend = "s3"
   config = {
-    bucket = "com.amrit.terraform-bucket-${var.env}"
+    bucket = "com.amrit.terraform-backend.lf"
     key    = "ec2/${var.env}/terraform.tfstate"
     region = "us-east-1"
   }
 
 }
+
+
 
 
 module "ec2_s3_bucket" {
@@ -67,7 +69,7 @@ resource "aws_s3_bucket_policy" "policy" {
     Statement = [{
       Effect = "Allow",
       Principal = {
-        AWS = data.terraform_remote_state.ec2.outputs.ec2_role_arn
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2_access_s3_role_${var.env}"
       }
       Action   = ["s3:GetObject", "s3:PutObject"],
       Resource = "${module.ec2_s3_bucket.bucket_arn}/*"
