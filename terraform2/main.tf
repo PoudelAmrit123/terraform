@@ -36,6 +36,7 @@ data "terraform_remote_state" "ec2" {
 
 }
 
+
 module "s3_bucket" {
   # account_id               = var.account_id
   source                   = "./../module/s3"
