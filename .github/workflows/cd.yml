@@ -1,0 +1,87 @@
+name: Deploying From main
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Select project to deploy"
+        required: true
+        default: "terraform1"
+        type: choice
+        options:
+          - terraform1
+          - terraform2
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - prod
+      tag:
+        description: "Enter release tag (e.g. terraform1@v1.0.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+          echo "PROJECT=${{ github.event.inputs.project }}" >> $GITHUB_ENV
+          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          echo "ENV=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Create deployment directory
+        run: mkdir -p $PROJECT
+
+      - name: Download artifact from S3
+        run: |
+          aws s3 cp s3://com.amrit.terraform-backend.lf/artifacts/build-artifacts-${TAG}.zip ${PROJECT}/
+
+      - name: Unzip artifact
+        run: |
+          unzip ${PROJECT}/build-artifacts-${TAG}.zip -d ${PROJECT}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.12.2
+
+      - name: Terraform Init
+        working-directory: ${{ env.PROJECT }}
+        run: terraform init --backend-config=backend-${{ env.ENV }}.hcl -reconfigure
+
+      - name: Terraform Apply
+        working-directory: ${{ env.PROJECT }}
+        run: terraform apply --var=${{ env.ENV }} -auto-approve
+
+
+
+       # /* // Later on Adjust on For the dev environmnet type   */
+      # - name: Set backend config based on branch
+      #   id: backend-config
+      #   run: |
+      #     if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+      #       echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+      #       echo "env=dev" >> $GITHUB_OUTPUT
+
+      #     elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+      #       echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+      #       echo "env=prod" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+      #       echo "env=dev" >> $GITHUB_OUTPUT
+      #     fi
