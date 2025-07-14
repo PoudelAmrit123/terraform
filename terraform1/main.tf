@@ -97,7 +97,7 @@ module "ec2_instance" {
   instance_type = local.config.instance_type
   tags = merge(
     local.tags, {
-      Name = "EC2 Instance"
+      Name = "EC2 Instance from the ${var.env}"
 
   })
   key_name = var.key_name
