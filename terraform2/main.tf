@@ -2,6 +2,9 @@ terraform {
 
   required_version = ">= 1.12.2"
 
+
+
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -36,16 +39,16 @@ data "terraform_remote_state" "ec2" {
 }
 
 
-module "s3_bucket" {
+module "ec2_s3_bucket" {
   # account_id               = var.account_id
   source                   = "./../module/s3"
-  bucket_name              = "com.amrit.terraform-backend.lf"
+  bucket_name              = "com.amrit.terraform-bucket-${var.env}"
   should_enable_versioning = var.should_enable_versioning
   env                      = var.env
 
   tags = merge(
     local.tags, {
-      Name = "S3 bucket"
+      Name = "EC2 instance S3 bucket"
     }
 
   )
@@ -55,7 +58,7 @@ module "s3_bucket" {
 
 
 resource "aws_s3_bucket_policy" "policy" {
-  bucket = module.s3_bucket.bucket_name
+  bucket = module.ec2_s3_bucket.bucket_name
 
 
 
@@ -67,7 +70,7 @@ resource "aws_s3_bucket_policy" "policy" {
         AWS = data.terraform_remote_state.ec2.outputs.ec2_role_arn
       }
       Action   = ["s3:GetObject", "s3:PutObject"],
-      Resource = "${module.s3_bucket.bucket_arn}/*"
+      Resource = "${module.ec2_s3_bucket.bucket_arn}/*"
     }]
   })
 }
