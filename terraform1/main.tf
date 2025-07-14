@@ -93,7 +93,7 @@ module "ec2_instance" {
   instance_type = local.config.instance_type
   tags = merge(
     local.tags, {
-      Name = "EC2 Instance"
+      Name = "Amrit EC2 Instance  ${var.env}"
 
   })
   key_name = var.key_name
