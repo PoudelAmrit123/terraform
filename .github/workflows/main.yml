@@ -162,6 +162,11 @@ jobs:
         working-directory: terraform2
         run: |
           TAG=${{ steps.tag_push.outputs.release_tag }}
+          mkdir -p ../artifact-content/module
+          cp -r . ../artifact-content/terraform2
+          cp -r ../module/ec2 ../artifact-content/module/ec2
+          cd ../artifact-content
+          zip -r ../build-artifacts-${TAG}.zip ./*
 
           zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
 
@@ -303,6 +308,11 @@ jobs:
         working-directory: terraform1
         run: |
           TAG=${{ steps.tag_push.outputs.release_tag }}
+          mkdir -p ../artifact-content/module
+          cp -r . ../artifact-content/terraform1
+          cp -r ../module/ec2 ../artifact-content/module/ec2
+          cd ../artifact-content
+          zip -r ../build-artifacts-${TAG}.zip ./*
 
           zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
 
