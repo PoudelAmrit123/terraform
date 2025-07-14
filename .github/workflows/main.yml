@@ -335,6 +335,7 @@ jobs:
 
   upload_to_s3:
     needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+    if: ${{ always() && (needs.terraform1_tag_and_release.result == 'success' || needs.terraform1_tag_and_release == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download terraform1 artifact
