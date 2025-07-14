@@ -31,7 +31,7 @@ locals {
 data "terraform_remote_state" "ec2" {
   backend = "s3"
   config = {
-    bucket = "com.amrit.terraform-backend.lf"
+    bucket = "com.amrit.terraform-bucket-${var.env}"
     key    = "ec2/${var.env}/terraform.tfstate"
     region = "us-east-1"
   }
@@ -48,7 +48,7 @@ module "ec2_s3_bucket" {
 
   tags = merge(
     local.tags, {
-      Name = "EC2 instance S3 bucket"
+      Name = "EC2 instance S3 bucket "
     }
 
   )
