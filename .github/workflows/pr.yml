@@ -379,13 +379,16 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
             
 
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
             
           else
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
             
           fi
       - name: Terraform Init
@@ -428,13 +431,16 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
             
 
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "backend_config=backend-prod.hcl" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
             
           else
             echo "backend_config=backend-dev.hcl" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
             
           fi
       - name: Terraform Init
@@ -444,7 +450,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: terraform1
-        run: terraform plan  |& tee tf_plan.txt
+        run: terraform plan --var="env=${{ steps.backend-config.outputs.env }}" |& tee tf_plan.txt
 
       - name: Strip ANSI characters
         run: |

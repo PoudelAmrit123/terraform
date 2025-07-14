@@ -40,3 +40,10 @@ variable "policy_name" {
   type        = string
   default     = "ec2_s3_access_policy_v2"
 }
+
+variable "env" {
+
+  description = "env value "
+  type        = string
+
+}

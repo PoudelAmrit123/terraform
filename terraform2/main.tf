@@ -1,8 +1,4 @@
 
-
-
-
-
 terraform {
 
   required_version = ">= 1.12.2"
@@ -45,6 +41,7 @@ module "s3_bucket" {
   source                   = "./../module/s3"
   bucket_name              = "com.amrit.terraform-backend.lf"
   should_enable_versioning = var.should_enable_versioning
+  env                      = var.env
 
   tags = merge(
     local.tags, {

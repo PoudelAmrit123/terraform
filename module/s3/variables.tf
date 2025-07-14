@@ -15,3 +15,9 @@ variable "should_enable_versioning" {
   type        = bool
 
 }
+
+variable "env" {
+  description = "env value "
+  type        = string
+
+}
