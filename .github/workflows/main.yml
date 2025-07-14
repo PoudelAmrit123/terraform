@@ -13,35 +13,35 @@ permissions:
   issues: write
 
 jobs:
-  filter:
-    runs-on: ubuntu-latest
-    outputs:
-      terraform2_changed: ${{ steps.filter.outputs.terraform2 }}
-      terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
+  # filter:
+    # runs-on: ubuntu-latest
+    # outputs:
+    #   terraform2_changed: ${{ steps.filter.outputs.terraform2 }}
+    #   terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
+    # steps:
+    #   - uses: actions/checkout@v3
+    #     with:
+    #       fetch-depth: 2
 
-      - name: Get Previous Commit
-        id: prev-commit
-        run: echo "PREV_COMMIT=$(git rev-parse HEAD^1)" >> $GITHUB_ENV
+    #   - name: Get Previous Commit
+    #     id: prev-commit
+    #     run: echo "PREV_COMMIT=$(git rev-parse HEAD^1)" >> $GITHUB_ENV
 
-      - name: Filter paths for terraform projects
-        id: filter
-        uses: dorny/paths-filter@v2
-        with:
-          base: ${{ env.PREV_COMMIT }}
-          filters: |
-            terraform1:
-              - 'terraform1/**'
-            terraform2:
-              - 'terraform2/**'
+    #   - name: Filter paths for terraform projects
+    #     id: filter
+    #     uses: dorny/paths-filter@v2
+    #     with:
+    #       base: ${{ env.PREV_COMMIT }}
+    #       filters: |
+    #         terraform1:
+    #           - 'terraform1/**'
+    #         terraform2:
+    #           - 'terraform2/**'
 
       
 
   terraform2_tag_and_release:
-    needs: [filter ]
+    # needs: [filter ]
     runs-on: ubuntu-latest
     permissions:
      pull-requests: write
@@ -187,7 +187,7 @@ jobs:
       
 
   terraform1_tag_and_release:
-    needs: [ filter ]
+    # needs: [ filter ]
     permissions:
      pull-requests: write
      contents: write
