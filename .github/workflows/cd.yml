@@ -53,7 +53,7 @@ jobs:
 
       - name: Unzip artifact
         run: |
-          unzip ${PROJECT}/build-artifacts-${TAG}.zip -d ${PROJECT}
+          unzip ${PROJECT}/build-artifacts-${TAG}.zip -d .
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
