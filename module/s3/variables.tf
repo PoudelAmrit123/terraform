@@ -18,6 +18,6 @@ variable "should_enable_versioning" {
 
 variable "env" {
   description = "env value "
-  type = string
-  
+  type        = string
+
 }

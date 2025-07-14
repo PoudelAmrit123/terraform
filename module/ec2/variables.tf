@@ -43,7 +43,7 @@ variable "policy_name" {
 
 variable "env" {
 
-   description = "env value "
-   type = string  
-   
+  description = "env value "
+  type        = string
+
 }
