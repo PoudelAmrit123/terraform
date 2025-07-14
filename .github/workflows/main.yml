@@ -315,13 +315,14 @@ jobs:
           zip -r ../build-artifacts-${TAG}.zip ./*
 
           zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
+          
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
-          files: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+          files: build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
           prerelease: false
 
           
@@ -330,7 +331,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform1-build-artifact-${{ steps.tag_push.outputs.release_tag }}
-          path: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+          path: build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
 
   upload_to_s3:
