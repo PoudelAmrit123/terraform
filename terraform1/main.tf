@@ -50,7 +50,7 @@ resource "aws_iam_role" "ec2_role" {
 }
 
 resource "aws_iam_policy" "s3_access_policy" {
-  name        = "ec2_s3_access_policy_${var.env}"
+  name        = "ec2_s3_access_policy_v1_${var.env}"
   description = "Allow EC2 instance to access S3 bucket"
 
   policy = jsonencode({
