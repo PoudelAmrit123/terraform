@@ -46,7 +46,7 @@ jobs:
     permissions:
      pull-requests: write
      contents: write
-    if: needs.filter.outputs.terraform2_changed == 'true'
+    # if: needs.filter.outputs.terraform2_changed == 'true'
     outputs:
        release_tag: ${{ steps.tag_push.outputs.release_tag }}
     steps:
@@ -192,7 +192,7 @@ jobs:
      pull-requests: write
      contents: write
     runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform1_changed == 'true'
+    # if: needs.filter.outputs.terraform1_changed == 'true'
     outputs:
      release_tag: ${{ steps.tag_push.outputs.release_tag }}
     steps:
