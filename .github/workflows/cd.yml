@@ -62,7 +62,9 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.PROJECT }}
-        run: terraform init --backend-config=backend-${{ env.ENV }}.hcl -reconfigure
+        run: |
+         echo "${{ env.PROJECT }}"
+         terraform init --backend-config=backend-${{ env.ENV }}.hcl -reconfigure
 
       - name: Terraform Apply
         working-directory: ${{ env.PROJECT }}
