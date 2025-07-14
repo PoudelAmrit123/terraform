@@ -16,7 +16,7 @@ variable "key_name" {
 
 variable "env" {
   description = "env file for the terraform 2 "
-  type = string
-  
+  type        = string
+
 }
 

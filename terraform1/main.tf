@@ -87,7 +87,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 
 
 module "ec2_instance" {
-  env = var.env
+  env           = var.env
   source        = "./../module/ec2"
   ami_id        = local.config.ami_id
   instance_type = local.config.instance_type
