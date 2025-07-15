@@ -9,7 +9,12 @@ output "instnace_arn" {
 
 }
 
-output "ec2_role_arn" {
-  value = aws_iam_role.ec2_role.arn
+# output "ec2_role_arn" {
+#   value = aws_iam_role.ec2_role.arn
 
+# }
+
+output "ec2_role" {
+  value = module.ec2_instance.role_name
+  
 }

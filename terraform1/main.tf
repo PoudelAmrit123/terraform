@@ -99,6 +99,7 @@ module "ec2_instance" {
   key_name = var.key_name
 
   s3_bucket_arn = "arn:aws:s3:::com.amrit.terraform-bucket-${var.env}"
+  
 
 
 }
