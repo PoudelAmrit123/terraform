@@ -79,7 +79,7 @@ resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "ec2_instance_profile_${var.env}"
   role = aws_iam_role.ec2_role.name
-  
+
 
 }
 
@@ -93,11 +93,15 @@ module "ec2_instance" {
   instance_type = local.config.instance_type
   tags = merge(
     local.tags, {
-      Name = "Amrit EC2 Instance  ${var.env}"
+
+      Name = "EC2 Instance  ${var.env}"
+
 
   })
   key_name = var.key_name
 
-  s3_bucket_arn = "arn:aws:s3:::com.amrit.terraform-backend.lf"
+  s3_bucket_arn = "arn:aws:s3:::com.amrit.terraform-bucket-${var.env}"
+  
+
 
 }
