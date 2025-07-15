@@ -13,40 +13,40 @@ permissions:
   issues: write
 
 jobs:
-  filter:
-    runs-on: ubuntu-latest
-    outputs:
-      terraform2_changed: ${{ steps.filter.outputs.terraform2 }}
-      terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
+  # filter:
+    # runs-on: ubuntu-latest
+    # outputs:
+    #   terraform2_changed: ${{ steps.filter.outputs.terraform2 }}
+    #   terraform1_changed: ${{ steps.filter.outputs.terraform1 }}
+    # steps:
+    #   - uses: actions/checkout@v3
+    #     with:
+    #       fetch-depth: 2
 
-      - name: Get Previous Commit
-        id: prev-commit
-        run: echo "PREV_COMMIT=$(git rev-parse HEAD^1)" >> $GITHUB_ENV
+    #   - name: Get Previous Commit
+    #     id: prev-commit
+    #     run: echo "PREV_COMMIT=$(git rev-parse HEAD^1)" >> $GITHUB_ENV
 
-      - name: Filter paths for terraform projects
-        id: filter
-        uses: dorny/paths-filter@v2
-        with:
-          base: ${{ env.PREV_COMMIT }}
-          filters: |
-            terraform1:
-              - 'terraform1/**'
-            terraform2:
-              - 'terraform2/**'
+    #   - name: Filter paths for terraform projects
+    #     id: filter
+    #     uses: dorny/paths-filter@v2
+    #     with:
+    #       base: ${{ env.PREV_COMMIT }}
+    #       filters: |
+    #         terraform1:
+    #           - 'terraform1/**'
+    #         terraform2:
+    #           - 'terraform2/**'
 
       
 
   terraform2_tag_and_release:
-    needs: [filter ]
+    # needs: [filter ]
     runs-on: ubuntu-latest
     permissions:
      pull-requests: write
      contents: write
-    if: needs.filter.outputs.terraform2_changed == 'true'
+    # if: needs.filter.outputs.terraform2_changed == 'true'
     outputs:
        release_tag: ${{ steps.tag_push.outputs.release_tag }}
     steps:
@@ -164,35 +164,37 @@ jobs:
           TAG=${{ steps.tag_push.outputs.release_tag }}
           mkdir -p ../artifact-content/module
           cp -r . ../artifact-content/terraform2
-          cp -r ../module/ec2 ../artifact-content/module/ec2
+          cp -r ../module/s3 ../artifact-content/module/s3
           cd ../artifact-content
           zip -r ../build-artifacts-${TAG}.zip ./*
 
           zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
+
+          
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
-          files: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+          files: build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
           prerelease: false
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform2-build-artifact-${{ steps.tag_push.outputs.release_tag }}
-          path: terraform2/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+          path: build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
       
 
   terraform1_tag_and_release:
-    needs: [ filter ]
+    # needs: [ filter ]
     permissions:
      pull-requests: write
      contents: write
     runs-on: ubuntu-latest
-    if: needs.filter.outputs.terraform1_changed == 'true'
+    # if: needs.filter.outputs.terraform1_changed == 'true'
     outputs:
      release_tag: ${{ steps.tag_push.outputs.release_tag }}
     steps:
@@ -315,13 +317,14 @@ jobs:
           zip -r ../build-artifacts-${TAG}.zip ./*
 
           zip -r build-artifacts-${TAG}.zip . -x "build-artifacts-*.zip"
+          
 
       - name: Create GitHub Release and upload artifact
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ steps.tag_push.outputs.release_tag }}
-          files: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+          files: build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
           prerelease: false
 
           
@@ -330,11 +333,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform1-build-artifact-${{ steps.tag_push.outputs.release_tag }}
-          path: terraform1/build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
+          path: build-artifacts-${{ steps.tag_push.outputs.release_tag }}.zip
 
 
   upload_to_s3:
     needs: [terraform1_tag_and_release, terraform2_tag_and_release]
+    if: ${{ always() && (needs.terraform1_tag_and_release.result == 'success' || needs.terraform1_tag_and_release == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download terraform1 artifact

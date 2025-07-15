@@ -1,5 +1,3 @@
-
-
 terraform {
 
   required_version = ">= 1.12.2"
@@ -36,7 +34,7 @@ locals {
 
 
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2_access_role"
+  name = "ec2_access_role_${var.env}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -52,7 +50,7 @@ resource "aws_iam_role" "ec2_role" {
 }
 
 resource "aws_iam_policy" "s3_access_policy" {
-  name        = "ec2_s3_access_policy"
+  name        = "ec2_s3_access_policy_v1_${var.env}"
   description = "Allow EC2 instance to access S3 bucket"
 
   policy = jsonencode({
@@ -79,7 +77,7 @@ resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile_v6"
+  name = "ec2_instance_profile_${var.env}"
   role = aws_iam_role.ec2_role.name
 
 
@@ -95,7 +93,9 @@ module "ec2_instance" {
   instance_type = local.config.instance_type
   tags = merge(
     local.tags, {
-      Name = "EC2 Instance from the ${var.env}"
+
+      Name = "EC2 Instance  ${var.env}"
+
 
   })
   key_name = var.key_name

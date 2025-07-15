@@ -53,7 +53,7 @@ jobs:
 
       - name: Unzip artifact
         run: |
-          unzip ${PROJECT}/build-artifacts-${TAG}.zip -d ${PROJECT}
+          unzip ${PROJECT}/build-artifacts-${TAG}.zip -d  ${PROJECT}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -61,12 +61,14 @@ jobs:
           terraform_version: 1.12.2
 
       - name: Terraform Init
-        working-directory: ${{ env.PROJECT }}
-        run: terraform init --backend-config=backend-${{ env.ENV }}.hcl -reconfigure
+        working-directory: ${{ env.PROJECT }}/${{ env.PROJECT }}
+        run: |
+         echo "${{ env.PROJECT }}"
+         terraform init --backend-config=backend-${{ env.ENV }}.hcl -reconfigure
 
       - name: Terraform Apply
-        working-directory: ${{ env.PROJECT }}
-        run: terraform apply --var=${{ env.ENV }} -auto-approve
+        working-directory: ${{ env.PROJECT }}/${{ env.PROJECT }}
+        run: terraform apply --var="env=${{env.ENV }}" -auto-approve
 
 
 
