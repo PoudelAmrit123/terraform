@@ -71,7 +71,7 @@ resource "aws_s3_bucket_policy" "policy" {
     Statement = [{
       Effect = "Allow",
       Principal = {
-        AWS = "arn:aws:iam::${var.account_id}:role/ec2_access_s3_role_${var.env}"
+        AWS = "arn:aws:iam::${var.account_id}:role/ec2_role_arn${var.env}"
       }
       Action   = ["s3:GetObject", "s3:PutObject"],
       Resource = "${module.ec2_s3_bucket.bucket_arn}/*"
